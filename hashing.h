@@ -25,7 +25,10 @@ typedef struct _Info
   ArgType arg_type;
   DataType data_type;
   CardinalityType cardinality_type;
-  int pos;
+  int position;
+  int args_number;
+  /*Vector only*/
+  int size;
 } Info;
 
 typedef struct _Entry
