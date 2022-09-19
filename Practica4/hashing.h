@@ -1,7 +1,7 @@
 #ifndef HASHING_H
 #define HASHING_H
 
-#define ID_LEN 100
+#define KEY_LEN 100
 
 enum ArgType
 {
@@ -40,12 +40,12 @@ typedef struct _Entry
 typedef struct _Table
 {
   Entry **entries;
-  int max_index;
+  int length;
 } Table;
 
 Table *create_table(int length);
 void destroy_table(Table &table);
-bool insert_entry(Table &table, Info info);
+bool insert_entry(Table &table, Info info, char * key);
 bool delete_entry(Table &table, char *key);
-Entry *search_entry(Table &table, char *key);
+Info *search_entry(Table &table, char *key);
 #endif
