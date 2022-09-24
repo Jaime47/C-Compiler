@@ -146,3 +146,218 @@ void asignar(FILE *fpasm, char *nombre, int es_variable)
 /*******************************************************
  * OPERACIONES ARITMETICAS/LOGICAS
  ********************************************************/
+
+/*******************************************************
+ * OPERACIONES COMPARATIVAS
+ ********************************************************/
+// Label: igual (etiqueta de la operacion)
+// Label: end_igual (final de la operacion)
+void igual(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, edx\n");
+    fprintf(fpasm, "  je igual_%d\n", etiqueta);
+
+    // No se cumple la condicion
+    fprintf(fpasm, "  push dword 0\n");
+    fprintf(fpasm, "  jmp end_igual_%d\n", etiqueta);
+    // Se cumple la condicion
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "igual_%d:\n", etiqueta);
+    fprintf(fpasm, "  push dword 1\n");
+    // Final
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "end_igual_%d:\n", etiqueta);
+    return;
+}
+
+// Label: distinto (etiqueta de la operacion)
+// Label: end_distinto (final de la operacion)
+void distinto(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, edx\n");
+    fprintf(fpasm, "  jne distinto_%d\n", etiqueta);
+
+    // No se cumple la condicion
+    fprintf(fpasm, "  push dword 0\n");
+    fprintf(fpasm, "  jmp end_distinto_%d\n", etiqueta);
+    // Se cumple la condicion
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "distinto_%d:\n", etiqueta);
+    fprintf(fpasm, "  push dword 1\n");
+    // Final
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "end_distinto_%d:\n", etiqueta);
+    return;
+}
+// Label: menor_igual (etiqueta de la operacion)
+// Label: end_menor_igual (final de la operacion)
+void menor_igual(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, edx\n");
+    fprintf(fpasm, "  jle menor_igual_%d\n", etiqueta);
+
+    // No se cumple la condicion
+    fprintf(fpasm, "  push dword 0\n");
+    fprintf(fpasm, "  jmp fin_menor_igual_%d\n", etiqueta);
+
+    // Se cumple la condicion
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "menor_igual_%d:\n", etiqueta);
+    fprintf(fpasm, "  push dword 1\n");
+    // Final
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "fin_menor_igual_%d:\n", etiqueta);
+    return;
+}
+// Label: mayor_igual (etiqueta de la operacion)
+// Label: end_mayor_igual (final de la operacion)
+void mayor_igual(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, edx\n");
+    fprintf(fpasm, "  jge mayor_igual_%d\n", etiqueta);
+
+    // No se cumple la condicion
+    fprintf(fpasm, "  push dword 0\n");
+    fprintf(fpasm, "  jmp fin_mayor_igual_%d\n", etiqueta);
+
+    // Se cumple la condicion
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "mayor_igual_%d:\n", etiqueta);
+    fprintf(fpasm, "  push dword 1\n");
+    //Final
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "fin_mayor_igual_%d:\n", etiqueta);
+    return;
+}
+
+// Label: menor (etiqueta de la operacion)
+// Label: end_menor (final de la operacion)
+void menor(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, edx\n");
+    fprintf(fpasm, "  jl menor_%d\n", etiqueta);
+    // Se cumple la condicion
+    fprintf(fpasm, "  push dword 0\n");
+    fprintf(fpasm, "  jmp end_menor_%d\n", etiqueta);
+    // No se cumple la condicion
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "menor_%d:\n", etiqueta);
+    fprintf(fpasm, "  push dword 1\n");
+    // Final
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "end_menor_%d:\n", etiqueta);
+    return;
+}
+
+// Label: mayor (etiqueta de la operacion)
+// Label: end_mayor (final de la operacion)
+void mayor(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, edx\n");
+    fprintf(fpasm, "  jg mayor_%d\n", etiqueta);
+    // Se cumple la condicion
+    fprintf(fpasm, "  push dword 0\n");
+    fprintf(fpasm, "  jmp end_mayor_%d\n", etiqueta);
+    // No se cumple la condicion
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "mayor_%d:\n", etiqueta);
+    fprintf(fpasm, "  push dword 1\n");
+    // Final
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "end_mayor_%d:\n", etiqueta);
+    return;
+}
+
+/*******************************************************
+ * OPERACIONES IMPUT/OUTPUT
+ ********************************************************/
