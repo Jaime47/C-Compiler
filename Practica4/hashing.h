@@ -5,18 +5,18 @@
 
 enum ArgType
 {
-  VARIABLE,
+  VARIABLE = 1,
   PARAMETRO,
   FUNCION
 };
 enum DataType
 {
-  BOOLEAN,
+  BOOLEAN = 1,
   INT
 };
 enum CardinalityType
 {
-  ESCALAR,
+  ESCALAR = 1,
   VECTOR
 };
 
