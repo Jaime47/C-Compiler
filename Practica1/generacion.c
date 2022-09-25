@@ -695,41 +695,104 @@ void ifthenelse_fin(FILE *fpasm, int etiqueta)
 }
 
 /*******************************************************
- * OPERACIONES DE GENERACION DE FUNCIONES
- ********************************************************/
-
-
-/*******************************************************
  * OPERACIONES DE GENERACION DE DATA STRUCTURES
  ********************************************************/
-void escribir_elemento_vector(FILE * fpasm,char * nombre_vector,
-  int tam_max, int exp_es_direccion) {
+void escribir_elemento_vector(FILE *fpasm, char *nombre_vector,
+                              int tam_max, int exp_es_direccion)
+{
 
     if (!fpasm)
         return;
 
-  // Coger indice de la pila
-  fprintf(fpasm, "  pop dword eax\n");
+    // Coger indice de la pila
+    fprintf(fpasm, "  pop dword eax\n");
 
-  // Si es direccion, obtener tambien el indice de la posicion en memoria
-  if (exp_es_direccion == 1) {
-    fprintf(fpasm, "  mov dword eax, [eax]\n");
-  }
+    // Si es direccion, obtener tambien el indice de la posicion en memoria
+    if (exp_es_direccion == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
 
+    // Error control
+    // Error: Out of range check
+    // Index < 0
+    fprintf(fpasm, "  cmp eax, 0\n");
+    fprintf(fpasm, "  jl near idx_out_of_range\n");
+    // Index > allowed max
+    fprintf(fpasm, "  cmp eax, %d-1\n", tam_max);
+    fprintf(fpasm, "  jg near idx_out_of_range\n");
 
-  // Error control
-  // Error: Out of range check 
-  // Index < 0
-  fprintf(fpasm, "  cmp eax, 0\n");
-  fprintf(fpasm, "  jl near idx_out_of_range\n");
-  // Index > allowed max
-  fprintf(fpasm, "  cmp eax, %d-1\n", tam_max);
-  fprintf(fpasm, "  jg near idx_out_of_range\n");
-
-  // Calcular direccion efectiva
-  fprintf(fpasm, "  mov dword edx, _%s\n", nombre_vector);
-  // Join con el indice de memoria
-  fprintf(fpasm, "  lea eax, [edx + eax*4]\n"); 
-  // Añadir a la pila
-  fprintf(fpasm, "  push dword eax\n"); 
+    // Calcular direccion efectiva
+    fprintf(fpasm, "  mov dword edx, _%s\n", nombre_vector);
+    // Join con el indice de memoria
+    fprintf(fpasm, "  lea eax, [edx + eax*4]\n");
+    // Añadir a la pila
+    fprintf(fpasm, "  push dword eax\n");
 }
+
+/*******************************************************
+ * OPERACIONES DE GENERACION DE FUNCIONES
+ ********************************************************/
+
+void declararFuncion(FILE *fd_asm, char *nombre_funcion, int num_var_loc)
+{
+    if (!fd_asm)
+        return;
+
+    // Etiqueta asignacion
+    fprintf(fd_asm, "\n");
+    fprintf(fd_asm, "_%s:\n", nombre_funcion);
+
+    // guardar ebp y esp ebp en cola, esp en ebp
+    fprintf(fd_asm, "  push ebp\n");
+    fprintf(fd_asm, "  mov ebp, esp\n");
+
+    // Alojar var. locales
+    fprintf(fd_asm, "  sub esp, %d\n", 4 * num_var_loc);
+    return;
+}
+
+void retornarFuncion(FILE *fd_asm, int es_variable)
+{
+    if (!fd_asm)
+        return;
+
+    // Pop retorno de funcion
+    fprintf(fd_asm, "  pop eax\n");
+    // Si es_variable es una direccion u otra variable guardamos eax en la pila
+    if (es_variable == 1)
+    {
+        fprintf(fd_asm, "  mov dword eax, [eax]\n");
+    }
+
+    // Arreglar pila
+    fprintf(fd_asm, "  mov esp,ebp\n");
+    // Sacar ebp de la pila
+    fprintf(fd_asm, "  pop ebp\n");
+    // Retorno
+    fprintf(fd_asm, "  ret\n");
+
+    return;
+}
+
+void escribirParametro(FILE *fpasm, int pos_parametro, int num_total_parametros)
+{
+    if (!fpasm)
+        return;
+
+    int d_ebp;
+
+    // ***** MIRAR ESTO *****//
+    // Sabemos que ebp + 4 es la dir, ebp + 8 es el primer arg
+    // Movemos 4 + 4 * numero de parametros menos la posicion del parametro
+
+    d_ebp = 4 + 4 * (num_total_parametros - pos_parametro);
+
+    // Introducir param en pila
+    fprintf(fpasm, "  lea eax, [ebp + %d]\n", d_ebp);
+
+    fprintf(fpasm, "  push dword eax\n");
+
+    return;
+}
+
