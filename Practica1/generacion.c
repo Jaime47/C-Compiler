@@ -564,3 +564,64 @@ void mayor(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
 /*******************************************************
  * OPERACIONES IMPUT/OUTPUT
  ********************************************************/
+
+void leer(FILE *fpasm, char *nombre, int tipo)
+{
+    if (fpasm == NULL)
+        return;
+
+    // introduce la dirección donde se lee en la pila
+    fprintf(fpasm, " push dword _%s\n", nombre);
+
+    // llama a la funcion de leer correspondiente
+    if (tipo == ENTERO)
+    {
+        fprintf(fpasm, "  call scan_int\n");
+    }
+    else if(tipo == BOOLEANO)
+    {
+        fprintf(fpasm, "  call scan_boolean\n");
+    }
+    else
+    {
+        print("[DEBUG] Error: leer: int tipo no es ni 0 ni 1");
+    }
+    // Arreglar la pila
+    fprintf(fpasm, "  add esp, 4\n");
+    return;
+}
+
+void escribir(FILE *fpasm, int es_variable, int tipo)
+{
+
+    if (!fpasm)
+        return;
+
+    // Variable into stack
+    if (es_variable == 1)
+    {
+        fprintf(fpasm, "  pop dword edx\n");
+        fprintf(fpasm, "  push dword [edx]\n");
+    }
+
+    // Select print function
+    if (tipo == ENTERO)
+    {
+        fprintf(fpasm, "  call print_int\n");
+    }
+    else if(tipo == BOOLEANO)
+    {
+        fprintf(fpasm, "  call print_boolean\n");
+    }
+    else
+    {
+        print("[DEBUG] Error: escribir: int tipo no es ni 0 ni 1");
+    }
+    // Final de linea
+    fprintf(fpasm, "  call print_endofline\n");
+    // Arreglar la pila
+    fprintf(fpasm, "  add esp, 4\n");
+    return;
+}
+
+
