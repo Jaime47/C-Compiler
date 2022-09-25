@@ -578,7 +578,7 @@ void leer(FILE *fpasm, char *nombre, int tipo)
     {
         fprintf(fpasm, "  call scan_int\n");
     }
-    else if(tipo == BOOLEANO)
+    else if (tipo == BOOLEANO)
     {
         fprintf(fpasm, "  call scan_boolean\n");
     }
@@ -593,7 +593,6 @@ void leer(FILE *fpasm, char *nombre, int tipo)
 
 void escribir(FILE *fpasm, int es_variable, int tipo)
 {
-
     if (!fpasm)
         return;
 
@@ -609,7 +608,7 @@ void escribir(FILE *fpasm, int es_variable, int tipo)
     {
         fprintf(fpasm, "  call print_int\n");
     }
-    else if(tipo == BOOLEANO)
+    else if (tipo == BOOLEANO)
     {
         fprintf(fpasm, "  call print_boolean\n");
     }
@@ -624,4 +623,113 @@ void escribir(FILE *fpasm, int es_variable, int tipo)
     return;
 }
 
+/*******************************************************
+ * OPERACIONES CONTROL
+ ********************************************************/
 
+void ifthenelse_inicio(FILE *fpasm, int exp_es_variable, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword eax\n");
+
+    if (exp_es_variable == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, 0\n");
+    fprintf(fpasm, "  je else_%d\n", etiqueta);
+    return;
+}
+
+void ifthen_inicio(FILE *fpasm, int exp_es_variable, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword eax\n");
+
+    if (exp_es_variable == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    fprintf(fpasm, "  cmp eax, 0\n");
+
+    fprintf(fpasm, "  je end_if_%d\n", etiqueta);
+
+    return;
+}
+
+void ifthen_fin(FILE *fpasm, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "end_if_%d:\n", etiqueta);
+    return;
+}
+
+void ifthenelse_fin_then(FILE *fpasm, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  je end_if_else_%d\n", etiqueta);
+
+    fprintf(fpasm, "else_%d:\n", etiqueta);
+
+    return;
+}
+
+void ifthenelse_fin(FILE *fpasm, int etiqueta)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "end_if_else_%d:\n", etiqueta);
+
+    return;
+}
+
+/*******************************************************
+ * OPERACIONES DE GENERACION DE FUNCIONES
+ ********************************************************/
+
+
+/*******************************************************
+ * OPERACIONES DE GENERACION DE DATA STRUCTURES
+ ********************************************************/
+void escribir_elemento_vector(FILE * fpasm,char * nombre_vector,
+  int tam_max, int exp_es_direccion) {
+
+    if (!fpasm)
+        return;
+
+  // Coger indice de la pila
+  fprintf(fpasm, "  pop dword eax\n");
+
+  // Si es direccion, obtener tambien el indice de la posicion en memoria
+  if (exp_es_direccion == 1) {
+    fprintf(fpasm, "  mov dword eax, [eax]\n");
+  }
+
+
+  // Error control
+  // Error: Out of range check 
+  // Index < 0
+  fprintf(fpasm, "  cmp eax, 0\n");
+  fprintf(fpasm, "  jl near idx_out_of_range\n");
+  // Index > allowed max
+  fprintf(fpasm, "  cmp eax, %d-1\n", tam_max);
+  fprintf(fpasm, "  jg near idx_out_of_range\n");
+
+  // Calcular direccion efectiva
+  fprintf(fpasm, "  mov dword edx, _%s\n", nombre_vector);
+  // Join con el indice de memoria
+  fprintf(fpasm, "  lea eax, [edx + eax*4]\n"); 
+  // Añadir a la pila
+  fprintf(fpasm, "  push dword eax\n"); 
+}
