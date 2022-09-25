@@ -147,6 +147,209 @@ void asignar(FILE *fpasm, char *nombre, int es_variable)
  * OPERACIONES ARITMETICAS/LOGICAS
  ********************************************************/
 
+void sumar(FILE *fpasm, int es_variable_1, int es_variable_2)
+{
+
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable_2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable_1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+    // Suma
+    fprintf(fpasm, "  add eax, edx\n");
+    // Añadir a la pila
+    fprintf(fpasm, "  push dword eax\n");
+
+    return;
+}
+
+void restar(FILE *fpasm, int es_variable_1, int es_variable_2)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable_2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable_1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    // Resta
+    fprintf(fpasm, "  sub eax, edx\n");
+    // Añadir a la pila
+    fprintf(fpasm, "  push dword eax\n");
+
+    return;
+}
+
+void multiplicar(FILE *fpasm, int es_variable_1, int es_variable_2)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable_2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable_1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    // Multiplicacion
+    fprintf(fpasm, "  imul edx\n");
+    // Añadir a la pila
+    fprintf(fpasm, "  push dword eax\n");
+
+    return;
+}
+
+void dividir(FILE *fpasm, int es_variable_1, int es_variable_2)
+{
+    if (!fpasm)
+        return;
+    // Segundo operando en ecx
+    fprintf(fpasm, "  pop dword ecx\n");
+    if (es_variable_2 == 1)
+    {
+        fprintf(fpasm, "  mov dword ecx, [ecx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable_1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    // Check error: Division entre cero
+    fprintf(fpasm, "  cmp ecx, 0\n");
+    fprintf(fpasm, "  je error_div_zero\n");
+
+    fprintf(fpasm, "  mov edx, 0\n");
+
+    // Division
+    fprintf(fpasm, "  idiv ecx\n");
+    // Resultado en eax
+    fprintf(fpasm, "  push dword eax\n");
+
+    return;
+}
+
+void o(FILE *fpasm, int es_variable_1, int es_variable_2)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable_2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable_1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    // Or
+    fprintf(fpasm, "  or eax, edx\n");
+    // Añadir a la pila
+    fprintf(fpasm, "  push dword eax\n");
+
+    return;
+}
+
+void y(FILE *fpasm, int es_variable_1, int es_variable_2)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword edx\n");
+    if (es_variable_2 == 1)
+    {
+        fprintf(fpasm, "  mov dword edx, [edx]\n");
+    }
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable_1 == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    // And
+    fprintf(fpasm, "  and eax, edx\n");
+    // Resultado en eax
+    fprintf(fpasm, "  push dword eax\n");
+
+    return;
+}
+
+void cambiar_signo(FILE *fpasm, int es_variable)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    // Cambio de signo
+    fprintf(fpasm, "  neg eax\n");
+    // Resultado en eax
+    fprintf(fpasm, "  push dword eax\n");
+    return;
+}
+
+void no(FILE *fpasm, int es_variable, int cuantos_no)
+{
+    if (!fpasm)
+        return;
+
+    fprintf(fpasm, "  pop dword eax\n");
+    if (es_variable == 1)
+    {
+        fprintf(fpasm, "  mov dword eax, [eax]\n");
+    }
+
+    // Checkeo top de la pila (0 o 1)
+    fprintf(fpasm, "  cmp eax, 0\n");
+    fprintf(fpasm, "  je no_%d\n", cuantos_no);
+    // Si es 1, asignamos 0
+    fprintf(fpasm, "  mov eax, 0\n");
+    fprintf(fpasm, "  jmp end_no_%d\n", cuantos_no);
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "no_%d:\n", cuantos_no);
+    // Si es 0, asignamos 1
+    fprintf(fpasm, "  mov eax, 1\n");
+    fprintf(fpasm, "\n");
+    fprintf(fpasm, "end_no_%d:\n", cuantos_no);
+
+    // Añadir resultado a la pila
+    fprintf(fpasm, "  push dword eax\n");
+    return;
+}
+
 /*******************************************************
  * OPERACIONES COMPARATIVAS
  ********************************************************/
@@ -284,7 +487,7 @@ void mayor_igual(FILE *fpasm, int es_variable1, int es_variable2, int etiqueta)
     fprintf(fpasm, "\n");
     fprintf(fpasm, "mayor_igual_%d:\n", etiqueta);
     fprintf(fpasm, "  push dword 1\n");
-    //Final
+    // Final
     fprintf(fpasm, "\n");
     fprintf(fpasm, "fin_mayor_igual_%d:\n", etiqueta);
     return;
