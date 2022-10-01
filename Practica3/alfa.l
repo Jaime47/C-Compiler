@@ -1,11 +1,15 @@
 %{
 #include <stdio.h>
 #include "tokens.h"
+#include "y.tab.h"
 long yylin = 1;
 long yycol = 1;
-
+extern FILE * out;
+int error_id_out_of_range = 0;
+int error_not_allowed_symbol = 0;
 %}
 %option noyywrap
+
 MAIN        "main"
 INT         "int"
 BOOLEAN     "boolean"
