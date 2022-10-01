@@ -101,8 +101,8 @@ COMENTARIO  "//"[^\n]*\n
 {TRUE}      { yycol += yyleng; return TOK_TRUE; }
 {FALSE}     { yycol += yyleng; return TOK_FALSE; }
 
-{IDENTIFICADORERROR}    { yycol+=yyleng; return TOK_ERROR; }
-{ERROR}     { yycol += yyleng; return TOK_ERROR; }
+{IDENTIFICADORERROR}    { yycol+=yyleng; error_id_out_of_range = 1; return TOK_ERROR; }
+{ERROR}     { yycol += yyleng; error_not_allowed_symbol = 1; ;return TOK_ERROR; }
 
 {ESPACIO}       { yycol += yyleng; }
 {SALTOLINEA}    { yycol=0; yylin++; }
