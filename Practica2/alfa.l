@@ -3,9 +3,13 @@
 #include "tokens.h"
 long yylin = 1;
 long yycol = 1;
-
 %}
+
 %option noyywrap
+ESPACIO 	[ \t]+
+SALTOLINEA	\n|\n\r|\r
+COMENTARIO  "//"[^\n]*\n
+
 MAIN        "main"
 INT         "int"
 BOOLEAN     "boolean"
@@ -41,25 +45,25 @@ MAYORIGUAL        ">="
 MENOR             "<"
 MAYOR             ">"
 
-IDENTIFICADOR     [a-zA-Z]([0-9]|[a-zA-Z]){0,98}
-
-CONSTANTENTERA   [0-9]+
 TRUE              "true"
 FALSE             "false"
 
 IDENTIFICADORERROR     [a-zA-Z]([0-9]|[a-zA-Z]){99,}
+IDENTIFICADOR     [a-zA-Z]([0-9]|[a-zA-Z]){0,98}
+CONSTANTENTERA   [0-9]+
+
 ERROR		.
-
-ESPACIO 	[ \t]+
-SALTOLINEA	\n|\n\r|\r
-COMENTARIO  "//"[^\n]*\n
-
 %%
+{ESPACIO}       { yycol += yyleng; }
+{SALTOLINEA}    { yycol=0; yylin++; }
+{COMENTARIO}    { yycol=0; yylin++; }
+
 {MAIN}      { yycol += yyleng; return TOK_MAIN; }
 {INT}       { yycol += yyleng; return TOK_INT; }
 {BOOLEAN}   { yycol += yyleng; return TOK_BOOLEAN; }
 {ARRAY}     { yycol += yyleng; return TOK_ARRAY; }
 {FUNCTION}  { yycol += yyleng; return TOK_FUNCTION; }
+
 {IF}        { yycol += yyleng; return TOK_IF; }
 {ELSE}      { yycol += yyleng; return TOK_ELSE; }
 {WHILE}     { yycol += yyleng; return TOK_WHILE; }
@@ -91,16 +95,12 @@ COMENTARIO  "//"[^\n]*\n
 {MENOR}                 { yycol += yyleng; return TOK_MENOR; }
 {MAYOR}                 { yycol += yyleng; return TOK_MAYOR; }
 
-{IDENTIFICADOR}         { yycol+=yyleng; return TOK_IDENTIFICADOR; }
-
-{CONSTANTENTERA}       { yycol+=yyleng; return TOK_CONSTANTE_ENTERA; }
 {TRUE}      { yycol += yyleng; return TOK_TRUE; }
 {FALSE}     { yycol += yyleng; return TOK_FALSE; }
 
 {IDENTIFICADORERROR}    { yycol+=yyleng; return TOK_ERROR; }
-{ERROR}     { yycol += yyleng; return TOK_ERROR; }
+{IDENTIFICADOR}         { yycol+=yyleng; return TOK_IDENTIFICADOR; }
+{CONSTANTENTERA}       { yycol+=yyleng; return TOK_CONSTANTE_ENTERA; }
 
-{ESPACIO}       { yycol += yyleng; }
-{SALTOLINEA}    { yycol=0; yylin++; }
-{COMENTARIO}    { yycol=0; yylin++; }
+{ERROR}     { yycol += yyleng; return TOK_ERROR; }
 %%
