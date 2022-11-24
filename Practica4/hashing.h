@@ -3,6 +3,7 @@
 
 #define KEY_LEN 100
 
+
 enum ArgType
 {
   VARIABLE = 1,
@@ -22,9 +23,9 @@ enum CardinalityType
 
 typedef struct _Info
 {
-  ArgType arg_type;
-  DataType data_type;
-  CardinalityType cardinality_type;
+  enum ArgType arg_type;
+  enum DataType data_type;
+  enum CardinalityType cardinality_type;
   int position;
   int args_number;
   /*Vector only*/
@@ -34,7 +35,7 @@ typedef struct _Info
 typedef struct _Entry
 {
   Info info;
-  char entry_id[ID_LEN];
+  char entry_id[KEY_LEN];
 } Entry;
 
 typedef struct _Table
@@ -44,8 +45,8 @@ typedef struct _Table
 } Table;
 
 Table *create_table(int length);
-void destroy_table(Table &table);
-bool insert_entry(Table &table, Info info, char * key);
-bool delete_entry(Table &table, char *key);
-Info *search_entry(Table &table, char *key);
+void destroy_table(Table *table);
+int insert_entry(Table *table, Info info, char * key);
+int delete_entry(Table *table, char *key);
+Info *search_entry(Table *table, char *key);
 #endif

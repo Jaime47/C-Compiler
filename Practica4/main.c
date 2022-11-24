@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 
     if (argc < 3)
     {
-        fprintf(stderr, "Comprobar comando de ejeccucion, forma indicada: ./nombre <entrada.txt> <salida.txt>\n");
+        fprintf(stderr, "Check: ./nombre <entrada.txt> <salida.txt>\n");
         return 1;
     }
     in = fopen(argv[1], "r");
@@ -54,10 +54,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    global_table = create_table(TABLESIZE);
+    global_table = create_table(TABLE_SIZE);
     if (!global_table)
     {
-        printf("Error en la creacion de una tabla global\n");
+        printf("Error: No se pudo crear tabla global\n");
         return 1;
     }
 
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
         if (op_type == OP_INSERT)
         {
-            info = {value, 0, 0, 0, 0, 0};
+            info = create_standard_info(value);
 
             insert_table = global_table;
             if (local_table != NULL)
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            info = {value, 0, 0, 0, 0, 0};
+            info = create_standard_info(value);
 
             result = hash_table_insert(global_table, key, info);
             print_output(out, result, key, value, OP_AMBIT);
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            local_table = hash_table_create(TABLESIZE);
+            local_table = hash_table_create(TABLE_SIZE);
             result = hash_table_insert(local_table, key, info);
         }
 
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
             search_result = search_entry(global_table, line);
             if (search_result != NULL)
             {
-                fprintf(out, "%s\t%d\n", key, search_result->elem_category);
+                fprintf(out, "%s\t%d\n", key, search_result->arg_type);
             }
             else
             {
@@ -166,6 +166,12 @@ void print_output(FILE *out, int result, char *key, int value, int op_type)
             fprintf(out, "No hay espacio en la tabla para key: %s con valor: %d\n", key, value);
         }
     }
+}
+
+/* CREATE STANDARD INFO*/
+Info create_standard_info(int value) {
+    Info result = {value, 0, 0, 0, 0, 0};
+    return result;
 }
 
 int parse_line_to_hash(char *line, char **indent, int *value)
