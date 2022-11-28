@@ -5,42 +5,20 @@
  * contiene la logica referente a las operaciones
  * de insercion, extraccion y busqueda
  * de una tabla hash
- *
- * The hash function used to create this logic is Fowler–Noll–Vo's
  */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
 
 #include "hashing.h"
 
-#define HASH_OFFSET 14695981039346656037UL
-#define HASH_PRIME 1099511628211UL
-
-static uint64_t hash(const char *key)
-{
-  uint64_t hash_object = HASH_OFFSET;
-  for (const char *i = key; *i; i++)
-  {
-    hash_object ^= (uint64_t)(unsigned char)(i);
-    hash_object *= HASH_PRIME;
-  }
-  return hash_object;
-}
 /**
  * Creates a table object
- * @param int lenght of table
  * @return Table object
  */
-Table *create_table(int length)
+Table *create_table()
 {
-  if (length == 0)
-    return NULL;
-
   Table *table = NULL;
-  Entry **entries = NULL;
 
   table = (Table *)calloc(1, sizeof(Table));
   if (!table)
@@ -48,20 +26,25 @@ Table *create_table(int length)
     return NULL;
   }
 
-  entries = (Entry **)calloc(length, sizeof(Entry *));
-  if (!entries)
+  table->local = (Entry **)calloc(1, sizeof(Entry *));
+  if (!table->local)
   {
     free(table);
     return NULL;
   }
-  // is this truly necessary?, I miss Java
-  for (int i = 0; i < length; i++)
-  {
-    entries[i] = NULL;
-  }
+  *(table->local) = NULL;
 
-  table->entries = entries;
-  table->length = length;
+  table->global = (Entry **)calloc(1, sizeof(Entry *));
+  if (!table->global)
+  {
+    free(table->local);
+    free(table);
+    return NULL;
+  }
+  *(table->global) = NULL;
+
+  table->env = GLOBAL;
+
   return table;
 }
 /**
@@ -73,112 +56,164 @@ void destroy_table(Table *table)
   if (!table)
     return;
 
-  for (int i = 0; i < table->length; i++)
+  Entry *entry, *temp;
+
+  HASH_ITER(hh, *(table->global), entry, temp)
   {
-    if (table->entries[i])
-    {
-      free(table->entries[i]);
-    }
+    HASH_DEL(*(table->global), entry);
+    free(entry);
   }
 
-  free(table->entries);
+  free(table->global);
+  free(table->local);
+
   free(table);
   return;
+}
+
+int open_local_env(Table *table, char *key, int number)
+{
+
+  Entry *entry1 = NULL;
+  Entry *entry2 = NULL;
+
+  if (table->env == LOCAL)
+  {
+    return 1;
+  }
+
+  entry1 = create_entry(key, number);
+  entry2 = create_entry(key, number);
+
+  if (!entry1 || !entry2)
+  {
+    return 1;
+  }
+
+  HASH_ADD_STR(*(table->global), key, entry1);
+
+  HASH_ADD_STR(*(table->local), key, entry2);
+
+  table->env = LOCAL;
+
+  return 0;
+}
+
+int shut_down_local_env(Table *table)
+{
+
+  Entry *entry, *temp;
+
+  if (table->env == GLOBAL)
+  {
+    return 1;
+  }
+
+  HASH_ITER(hh, *(table->local), entry, temp)
+  {
+    HASH_DEL(*(table->local), entry);
+    free(entry);
+  }
+
+  table->env = GLOBAL;
+  return 0;
+}
+
+Entry *create_entry(char *key, int number)
+{
+
+  Entry *entry = NULL;
+
+  entry = (Entry *)calloc(1, sizeof(Entry));
+
+  if (!entry)
+  {
+    return NULL;
+  }
+
+  entry->key = key;
+  entry->integer = number;
+
+  return entry;
 }
 
 /**
  * Inserts an entry in a table
  * @param table table object
- * @param info Table entry information
+ * @param key key of entry
+ * @param number integer of entry
  * @return Table object
  */
-int insert_entry(Table *table, Info info, char *key)
+int insert_entry(Table *table, int number, char *key)
 {
-  if (!table || !key)
-    return 1;
-
-  int position = hash(key) % table->length;
-  int initialPosition = position;
-  while (table->entries[position] != NULL)
-  {
-    if (strcmp(table->entries[position]->entry_id, key) == 0)
-    {
-      return 1;
-    }
-
-    position++;
-    initialPosition = position % table->length;
-
-    if (position == initialPosition)
-      return 1;
-  }
+  // if (!table || !key)
+  // return 1;
   Entry *entry = NULL;
-  entry = (Entry *)calloc(1, sizeof(Entry));
-  if (!entry)
-    return 1;
 
-  entry->info = info;
-  memset(entry->entry_id, 0, KEY_LEN);
-  strncpy(entry->entry_id, key, KEY_LEN - 1);
-  table->entries[position] = entry;
-  return 0;
-}
-/**
- * Deletes an entry in a table
- * @param table table object
- * @param key Entry key to be searched
- * @return true if succeeded false if not
- */
-int delete_entry(Table *table, char *key)
-{
-
-  if (!table || !key)
-    return 1;
-
-  int position = hash(key) % table->length;
-  int initialPosition = position;
-  while (table->entries[position] != NULL)
+  if (table->env == GLOBAL)
   {
-    if (strcmp(table->entries[position]->entry_id, key) == 0)
-    {
-      free(table->entries[position]);
-      table->entries[position] = NULL;
-      return 1;
-    }
-
-    position++;
-    initialPosition = position % table->length;
-
-    if (position == initialPosition)
-      break;
+    HASH_FIND_STR(*(table->global), key, entry);
   }
+
+  else
+  {
+    HASH_FIND_STR(*(table->local), key, entry);
+  }
+
+  if (entry != NULL)
+  {
+    return 1;
+  }
+
+  entry = create_entry(key, number);
+
+  if (!entry)
+  {
+    return 1;
+  }
+  if (table->env == GLOBAL)
+  {
+    HASH_ADD_STR(*(table->global), key, entry);
+  }
+  else
+  {
+    HASH_ADD_STR(*(table->local), key, entry);
+  }
+
   return 0;
 }
 /**
  * Searches an entry's information in a table
  * @param table table object
  * @param key Entry key to be searched
- * @return Info object linked to entry
+ * @return Entry object linked to entry
  */
-Info *search_entry(Table *table, char *key)
+Entry *search_entry(Table *table, char *key)
 {
   if (!table || !key)
     return NULL;
 
-  int position = hash(key) % table->length;
-  int initialPosition = position;
-  while (table->entries[position] != NULL)
+  Entry *entry = NULL;
+
+  if (table->env == GLOBAL)
   {
-    if (strcmp(table->entries[position]->entry_id, key) == 0)
-    {
-      return &table->entries[position]->info;
-    }
 
-    position++;
-    initialPosition = position % table->length;
-
-    if (position == initialPosition)
-      break;
+    HASH_FIND_STR(*(table->global), key, entry);
   }
-  return NULL;
+  else
+  {
+
+    HASH_FIND_STR(*(table->local), key, entry);
+    if (!entry)
+    {
+
+      HASH_FIND_STR(*(table->global), key, entry);
+    }
+  }
+  if (!entry)
+  {
+    return NULL;
+  }
+
+  return entry;
 }

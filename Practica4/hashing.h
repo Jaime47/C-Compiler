@@ -1,52 +1,34 @@
 #ifndef HASHING_H
 #define HASHING_H
+#include "uthash.h"
 
-#define KEY_LEN 100
-
-
-enum ArgType
+typedef enum 
 {
-  VARIABLE = 1,
-  PARAMETRO,
-  FUNCION
-};
-enum DataType
-{
-  BOOLEAN = 1,
-  INT
-};
-enum CardinalityType
-{
-  ESCALAR = 1,
-  VECTOR
-};
+  GLOBAL = 1,
+  LOCAL
+}EnvType;
 
-typedef struct _Info
+typedef struct Entry
 {
-  enum ArgType arg_type;
-  enum DataType data_type;
-  enum CardinalityType cardinality_type;
-  int position;
-  int args_number;
-  /*Vector only*/
-  int size;
-} Info;
+  char *key;
+  int integer;
+  UT_hash_handle hh;
+}Entry;
 
-typedef struct _Entry
+typedef struct Table
 {
-  Info info;
-  char entry_id[KEY_LEN];
-} Entry;
+  Entry **global;
+  Entry **local;
+  EnvType env;
+}Table;
 
-typedef struct _Table
-{
-  Entry **entries;
-  int length;
-} Table;
 
-Table *create_table(int length);
+
+Table *create_table();
 void destroy_table(Table *table);
-int insert_entry(Table *table, Info info, char * key);
-int delete_entry(Table *table, char *key);
-Info *search_entry(Table *table, char *key);
+int open_local_env(Table *table, char *key, int number);
+Entry* create_entry(char* key, int number);
+int shut_down_local_env(Table * table);
+int insert_entry(Table *table, int number, char * key);
+Entry *search_entry(Table *table, char *key);
 #endif
