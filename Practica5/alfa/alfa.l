@@ -104,8 +104,8 @@ ERROR		.
 {FALSE}     { yycol += yyleng; fprintf(out, ";D:\tfalse\n"); return TOK_FALSE; }
 
 {IDENTIFICADORERROR}    { yycol+=yyleng; error_id_out_of_range = 1; return TOK_ERROR; }
-{IDENTIFICADOR}         { yycol+=yyleng; fprintf(out, ";D:\t%s\n", yytext); return TOK_IDENTIFICADOR; }
-{CONSTANTENTERA}       { yycol+=yyleng; fprintf(out, ";D:\t%s\n", yytext); return TOK_CONSTANTE_ENTERA; }
+{IDENTIFICADOR}         { yycol+=yyleng; strcpy(yylval.atributos.nombre, yytext); fprintf(out, ";D:\t%s\n", yytext); return TOK_IDENTIFICADOR; }
+{CONSTANTENTERA}        { yycol+=yyleng; yylval.atributos.valor_entero = atoi( yytext ); fprintf(yyout, ";D:\t%s\n", yytext); return TOK_CONSTANTE_ENTERA; }
 
 {ERROR}     { yycol += yyleng; error_not_allowed_symbol = 1; return TOK_ERROR; }
 %%

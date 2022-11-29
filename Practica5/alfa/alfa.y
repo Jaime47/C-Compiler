@@ -1,20 +1,43 @@
 %{
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "hashing.h"
+#include "generacion.h"
+#include "alfa.h"
 
 void yyerror();
 int yylex();
 
-long yylin;
-long yycol;
+// Incializacion de variables alfa
+
+extern long yylin;
+extern long yycol;
 
 extern char * yytext;
 
-int error_id_out_of_range;
-int error_not_allowed_symbol;
+extern int error_id_out_of_range;
+extern int error_not_allowed_symbol;
 
 extern FILE * out;
 
+int f_return = 0;
+
+// Inicializacion de variables hash
+
+extern int current_size = 0;
+ElementCathegory current_cathegory;
+DataType current_data_type;
+DataComplexity current_data_complexity;
+ArgsInfo current_args_info;
+ArgsInfo current_local_args_info;
+Table * table;
+
 %}
+
+%union {
+    infoAtr atributos;
+}
 
 %token TOK_MAIN
 %token TOK_INT
@@ -52,13 +75,33 @@ extern FILE * out;
 %token TOK_MENOR
 %token TOK_MAYOR
 
-%token TOK_IDENTIFICADOR
-
-%token TOK_CONSTANTE_ENTERA
+%token <atributos> TOK_IDENTIFICADOR
+%token <atributos> TOK_CONSTANTE_ENTERA
 %token TOK_TRUE
 %token TOK_FALSE
-
 %token TOK_ERROR
+
+%type <atributos> identificador
+%type <atributos> constante
+%type <atributos> constante_logica
+%type <atributos> constante_entera
+%type <atributos> elemento_vector
+
+%type <atributos> exp
+%type <atributos> comparacion
+%type <atributos> condicional
+%type <atributos> if_exp
+%type <atributos> if_else_exp
+
+%type <atributos> bucle
+%type <atributos> while_exp
+%type <atributos> while
+
+%type <atributos> idf_llamada_funcion
+%type <atributos> funcion
+%type <atributos> fn_declaration
+%type <atributos> fn_name
+
 
 %left TOK_IGUAL TOK_MENORIGUAL TOK_MENOR TOK_MAYORIGUAL TOK_MAYOR TOK_DISTINTO
 %left TOK_MAS TOK_MENOS
@@ -68,8 +111,21 @@ extern FILE * out;
 
 %%
 
-programa: TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones funciones sentencias TOK_LLAVEDERECHA {fprintf(out, ";R1:\t<programa> ::= main { <declaraciones> <funciones> <sentencias> }");}
+programa: iniciarTablaHash TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones funciones sentencias TOK_LLAVEDERECHA {fprintf(out, ";R1:\t<programa> ::= main { <declaraciones> <funciones> <sentencias> }");
+escribirFin(out);
+eliminarTablaHash(table);}
         ;
+
+iniciarTablaHash:
+{
+    table = create_table();
+    if(!table){
+        fprintf(stderr, "Error: Inicializacion tabla hash");
+
+    }
+    escribir_subseccion_data(out);
+    escribir_cabecera_bss(out);
+}
 
 declaraciones: declaracion                  {fprintf(out, ";R2:\t<declaraciones> ::= <declaracion>\n");}
              | declaracion declaraciones    {fprintf(out, ";R3:\t<declaraciones> ::= <declaracion> <declaraciones>\n");}
@@ -78,29 +134,58 @@ declaraciones: declaracion                  {fprintf(out, ";R2:\t<declaraciones>
 declaracion: clase identificadores TOK_PUNTOYCOMA {fprintf(out, ";R4:\t<declaracion> ::= <clase> <identificadores> ;\n");}
            ;
 
-clase: clase_escalar    {fprintf(out, ";R5:\t<clase> ::= <clase_escalar>\n");}
-     | clase_vector     {fprintf(out, ";R7:\t<clase> ::= <clase_vector>\n");}
+clase: clase_escalar    {current_data_complexity = ESCALAR;fprintf(out, ";R5:\t<clase> ::= <clase_escalar>\n");}
+     | clase_vector     {current_data_complexity = ESCALAR;fprintf(out, ";R7:\t<clase> ::= <clase_vector>\n");}
      ;
 
-clase_escalar: tipo {fprintf(out, ";R9:\t<clase_escalar> ::= <tipo>\n");}
+clase_escalar: tipo {current_size = 1;fprintf(out, ";R9:\t<clase_escalar> ::= <tipo>\n");}
              ;
 
-tipo: TOK_INT       {fprintf(out, ";R10:\t<tipo> ::= int\n");}
-    | TOK_BOOLEAN   {fprintf(out, ";R11:\t<tipo> ::= boolean\n");}
+tipo: TOK_INT       {current_data_type = INT;fprintf(out, ";R10:\t<tipo> ::= int\n");}
+    | TOK_BOOLEAN   {current_data_type = BOOLEAN;fprintf(out, ";R11:\t<tipo> ::= boolean\n");}
     ;
 
-clase_vector: TOK_ARRAY tipo TOK_CORCHETEIZQUIERDO constante_entera TOK_CORCHETEDERECHO {fprintf(out, ";R15:\t<clase_vector> ::= array <tipo> [ <constante_entera> ]\n");}
-            ;
+clase_vector: TOK_ARRAY tipo TOK_CORCHETEIZQUIERDO constante_entera TOK_CORCHETEDERECHO {current_size = $4.valor_entero;
+    fprintf(out, ";R15:\t<clase_vector> ::= array <tipo> [ <constante_entera> ]\n");
+    if(current_size < 1 || current_size > MAX_VECTOR_LEN){
+        printf("****Error semantico en lin %ld: El tamano del vector <nombre_vector> excede los limites permitidos (1,64).",yylin);
+        destroy_table(table);
+        return 1;
+    }   
+};
 
 identificadores: identificador                          {fprintf(out, ";R18:\t<identificadores> ::= <identificador>\n");}
                | identificador TOK_COMA identificadores {fprintf(out, ";R19:\t<identificadores> ::= <identificador> , <identificadores>\n");}
                ;
 
 funciones: funcion funciones    {fprintf(out, ";R20:\t<funciones> ::= <funcion> <funciones>\n");}
-         | /* vacio */          {fprintf(out, ";R21:\t<funciones> ::=\n");}
+         |                      {fprintf(out, ";R21:\t<funciones> ::=\n");escribir_inicio_main(out);}
          ;
 
-funcion: TOK_FUNCTION tipo identificador TOK_PARENTESISIZQUIERDO parametros_funcion TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA declaraciones_funcion sentencias TOK_LLAVEDERECHA {fprintf(out, ";R22:\t<funcion> ::= function <tipo> <identificador> ( <parametros_funcion> ) { <declaraciones_funcion> <sentencias> }\n");}
+funcion: fn_declaration sentencias TOK_LLAVEDERECHA
+         {
+           fprintf(yyout,";R22:\t<funcion> ::= function <tipo> <identificador> ( <parametros_funcion> ) { <declaraciones_funcion> <sentencias> }\n");
+
+           if(f_return < 1)
+            {
+             printf("****Error semantico en lin %ld: Funcion %s no tiene sentencia de retorno.\n", yylin, $1.nombre);
+             delete_table(table);
+             return 1;
+            } 
+           shut_down_local_env(table);
+           Entry *entry;
+           entry = search_entry(table, $1.nombre);
+           if(!entry) {
+             delete_table(table);
+             return 1;
+           }
+           
+           entry->global->cardinal = current_args_info->cardinal;
+           entry->cathegory = current_cathegory;
+           current_args_info->cardinal = 0;
+           current_local_args_info->cardinal = 0;
+           current_args_info->position = 0;
+         }
        ;
 
 parametros_funcion: parametro_funcion resto_parametros_funcion  {fprintf(out, ";R23:\t<parametros_funcion> ::= <parametro_funcion> <resto_parametros_funcion>\n");}

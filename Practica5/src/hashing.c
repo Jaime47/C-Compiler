@@ -61,6 +61,7 @@ void destroy_table(Table *table)
   HASH_ITER(hh, *(table->global), entry, temp)
   {
     HASH_DEL(*(table->global), entry);
+    free(entry->key);
     free(entry);
   }
 
@@ -71,7 +72,8 @@ void destroy_table(Table *table)
   return;
 }
 
-int open_local_env(Table *table, char *key, int number)
+int open_local_env(Table *table, char *key, int size, ElementCathegory cathegory,
+                   DataType data, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
 {
 
   Entry *entry1 = NULL;
@@ -81,9 +83,9 @@ int open_local_env(Table *table, char *key, int number)
   {
     return 1;
   }
-
-  entry1 = create_entry(key, number);
-  entry2 = create_entry(key, number);
+  // PREGUNTA POR QUE ESTOY CREANDO DOS ELEMENTOS, Y NO METO EL MISMO EN LAS DOS TABLAS
+  entry1 = create_entry(key, size, cathegory, data, complexity, global, local);
+  entry2 = create_entry(key, size, cathegory, data, complexity, global, local);
 
   if (!entry1 || !entry2)
   {
@@ -112,6 +114,7 @@ int shut_down_local_env(Table *table)
   HASH_ITER(hh, *(table->local), entry, temp)
   {
     HASH_DEL(*(table->local), entry);
+    // Borramos mas cosas?
     free(entry);
   }
 
@@ -119,7 +122,8 @@ int shut_down_local_env(Table *table)
   return 0;
 }
 
-Entry *create_entry(char *key, int number)
+Entry *create_entry(char *key, int size, ElementCathegory cathegory,
+                    DataType data, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
 {
 
   Entry *entry = NULL;
@@ -132,7 +136,13 @@ Entry *create_entry(char *key, int number)
   }
 
   entry->key = key;
-  entry->integer = number;
+  entry->size = size;
+  entry->cathegory = cathegory;
+  entry->data = data;
+  entry->complexity = complexity;
+  // Cuidado con esto, cuanto tiempo permanece en memoria?
+  entry->global = global;
+  entry->local = local;
 
   return entry;
 }
@@ -140,37 +150,19 @@ Entry *create_entry(char *key, int number)
 /**
  * Inserts an entry in a table
  * @param table table object
- * @param key key of entry
- * @param number integer of entry
+ * @param entry entry object
  * @return Table object
  */
-int insert_entry(Table *table, int number, char *key)
+int insert_entry(Table *table, Entry *entry)
 {
-  // if (!table || !key)
-  // return 1;
-  Entry *entry = NULL;
+  if (!table || !entry)
+    return 1;
 
-  if (table->env == GLOBAL)
-  {
-    HASH_FIND_STR(*(table->global), key, entry);
-  }
-
-  else
-  {
-    HASH_FIND_STR(*(table->local), key, entry);
-  }
-
-  if (entry != NULL)
+  if (search_entry(table, entry->key) != NULL)
   {
     return 1;
   }
 
-  entry = create_entry(key, number);
-
-  if (!entry)
-  {
-    return 1;
-  }
   if (table->env == GLOBAL)
   {
     HASH_ADD_STR(*(table->global), key, entry);
