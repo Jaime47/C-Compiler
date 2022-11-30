@@ -22,6 +22,9 @@ extern int error_not_allowed_symbol;
 extern FILE * out;
 
 int f_return = 0;
+int f_type = 0;
+
+int condicional_etiqueta = 0;
 
 // Inicializacion de variables hash
 
@@ -168,16 +171,16 @@ funcion: fn_declaration sentencias TOK_LLAVEDERECHA
 
            if(f_return < 1)
             {
-             printf("****Error semantico en lin %ld: Funcion %s no tiene sentencia de retorno.\n", yylin, $1.nombre);
-             delete_table(table);
-             return 1;
+                printf("****Error semantico en lin %ld: Funcion %s no tiene sentencia de retorno.\n", yylin, $1.nombre);
+                delete_table(table);
+                return 1;
             } 
            shut_down_local_env(table);
            Entry *entry;
            entry = search_entry(table, $1.nombre);
            if(!entry) {
-             delete_table(table);
-             return 1;
+                delete_table(table);
+                return 1;
            }
            
            entry->global->cardinal = current_args_info->cardinal;
@@ -188,19 +191,63 @@ funcion: fn_declaration sentencias TOK_LLAVEDERECHA
          }
        ;
 
+
+fn_declaration: fn_name TOK_PARENTESISIZQUIERDO parametros_funcion TOK_PARENTESISDERECHO
+                TOK_LLAVEIZQUIERDA declaraciones_funcion
+                {
+                  Entry* entry;
+                  entry = search_entry(table, $1.nombre);
+                if(!entry) {
+                    delete_table(table);
+                    return 1;
+                }
+                strcpy($$.nombre, $1.nombre);
+                entry->global->cardinal = current_args_info->cardinal;
+                entry->local->cardinal = current_local_args_info->cardinal;
+                entry->cathegory = current_cathegory;
+                declararFuncion(out, $1.nombre, current_local_args_info->cardinal);
+                }
+              ;
+
+fn_name: TOK_FUNCTION tipo TOK_IDENTIFICADOR
+         {
+           if (!search_entry(table, $3.nombre)) {
+             strcpy($$.nombre, $3.nombre);
+             // HAY QUE MIRAR LOS ARGUMENTOS DE ESTA LLAMADA 
+             open_local_env(table, $3.nombre, current_size, VARIABLE, current_data_type, current_data_complexity, current_args_info, current_local_args_info);
+             
+             current_args_info->cardinal = 0;
+             f_return = 0;
+             f_type = current_data_type;         
+             current_size = 1;
+             current_local_args_info->cardinal = 0;
+             current_args_info->position = 0;
+
+           }
+           else {
+             printf("****Error semantico en lin %ld: Declaracion duplicada\n", yylin);
+             delete_table(table);
+             return 1;
+           }
+         }
+       ;
+
+
 parametros_funcion: parametro_funcion resto_parametros_funcion  {fprintf(out, ";R23:\t<parametros_funcion> ::= <parametro_funcion> <resto_parametros_funcion>\n");}
-                  | /* vacio */                                 {fprintf(out, ";R24:\t<parametros_funcion> ::=\n");}
+                  |                                             {fprintf(out, ";R24:\t<parametros_funcion> ::=\n");}
                   ;
 
 resto_parametros_funcion: TOK_PUNTOYCOMA parametro_funcion resto_parametros_funcion {fprintf(out, ";R25:\t<resto_parametros_funcion> ::= ; <parametro_funcion> <resto_parametros_funcion>\n");}
-                        | /* vacio */                                               {fprintf(out, ";R26:\t<resto_parametros_funcion> ::=\n");}
+                        |                                                           {fprintf(out, ";R26:\t<resto_parametros_funcion> ::=\n");}
                         ;
-
-parametro_funcion: tipo identificador   {fprintf(out, ";R27:\t<parametro_funcion> ::= <tipo> <identificador>\n");}
+// CAMBIAR identificador
+parametro_funcion: tipo identificador   {fprintf(out, ";R27:\t<parametro_funcion> ::= <tipo> <identificador>\n");
+                     current_args_info->position++;
+                     current_args_info->cardinal++;}
                  ;
 
 declaraciones_funcion: declaraciones    {fprintf(out, ";R28:\t<declaraciones_funcion> ::= <declaraciones>\n");}
-                     | /* vacío */      {fprintf(out, ";R29:\t<declaraciones_funcion> ::=\n");}
+                     |                  {fprintf(out, ";R29:\t<declaraciones_funcion> ::=\n");}
                      ;
 
 sentencias: sentencia           {fprintf(out, ";R30:\t<sentencias> ::= <sentencia>\n");}
@@ -221,18 +268,140 @@ bloque: condicional     {fprintf(out, ";R40:\t<bloque> ::= <condicional>\n");}
       | bucle           {fprintf(out, ";R41:\t<bloque> ::= <bucle>\n");}
       ;
 
-asignacion: identificador TOK_ASIGNACION exp     {fprintf(out, ";R43:\t<asignacion> ::= <identificador> = <exp>\n");}
-          | elemento_vector TOK_ASIGNACION exp   {fprintf(out, ";R44:\t<asignacion> ::= <elemento_vector> = <exp>\n");}
+asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp
+            {
+              Entry *entry;
+              entry = search_entry(table, $1.nombre);
 
-elemento_vector: identificador TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO {fprintf(out, ";R48:\t<elemento_vector> ::= <identificador> [ <exp> ]\n");}
-    ;
+              if(!entry) {
+                printf("****Error semantico en lin %ld: Acceso a variable no declarada (%s).\n", yylin, $1.nombre);
+                delete_table(table);
+                return 1;  
+              }
 
-condicional: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA                                                            {fprintf(out, ";R50:\t<condicional> ::= if ( <exp> ) { <sentencias> }\n");}
-           | TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA TOK_ELSE TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA    {fprintf(out, ";R51:\t<condicional> ::= if ( <exp> ) { <sentencias> } else { <sentencias> }\n");}
+              if(entry->complexity == VECTOR || entry->cathegory == FUNCION || entry->data != $3.tipo) {
+                printf("****Error semantico en lin %ld: Asignacion incompatible.\n", yylin);
+                delete_table(table);
+                return 1;
+              }
+
+              if(table->env == GLOBAL) {
+                asignar(out, $1.nombre, $3.es_direccion);
+              }
+
+              else {
+                escribirVariableLocal(out, entry->global->position);
+                asignarDestinoEnPila(out, $3.es_direccion);
+              }
+
+              fprintf(out,";R43:\t<asignacion> ::= <identificador> = <exp>\n");
+            }
+          | elemento_vector TOK_ASIGNACION exp
+            { 
+              Entry *entry;
+              entry = search_entry(table, $1.nombre);
+
+              if(!entry) {
+                printf("****Error semantico en lin %ld: Acceso a variable no declarada (%s).\n", yylin, $1.nombre);
+                delete_table(table);
+                return 1;  
+              }
+
+              if($1.tipo != $3.tipo) {
+                printf("****Error semantico en lin %ld: Asignacion incompatible.\n", yylin);
+                delete_table(table);
+                return 1;  
+              }
+              char e[MAX_INT_SIZE];
+              sprintf(e, "%d", $1.valor_entero);
+              escribir_operando(out, e, 0);
+              escribir_elemento_vector(out, entry->key, entry->size, $3.es_direccion); 
+              asignarDestinoEnPila(out, $3.es_direccion);
+
+              fprintf(out,";R44:\t<asignacion> ::= <elemento_vector> = <exp>\n");
+            }
+          ;
+
+elemento_vector: TOK_IDENTIFICADOR TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO
+                 { 
+                    Entry *entry;
+                    entry = search_entry(table, $1.nombre);
+
+                    if(!entry) {
+                        printf("****Error semantico en lin %ld: Acceso a variable no declarada (%s).\n", yylin, $1.nombre);
+                        delete_table(table);
+                        return 1;  
+                    }
+
+                   if(entry->complexity != VECTOR) {
+                     printf("****Error semantico en lin %ld: Indexando variable no vectorial.\n",yylin);
+                     delete_table(table);
+                     return 1;
+                   }
+                   if($3.tipo != INT){
+                     printf("****Error semantico en lin %ld: El indice debe ser de tipo entero.\n",yylin);
+                     delete_table(table);
+                     return 1;
+                   }
+                   $$.tipo = entry->data;
+                   $$.es_direccion = 1;
+                   $$.valor_entero = $3.valor_entero;
+
+                   escribir_elemento_vector(out, entry->key, entry->size, $3.es_direccion);
+                   fprintf(yyout,";R48:\t<elemento_vector> ::= <identificador> [ <exp> ]\n");
+                 }
+               ;
+
+condicional:    if_exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA                                                            
+                {
+                    ifthen_fin(out, $1.etiqueta);
+                    fprintf(out, ";R50:\t<condicional> ::= if ( <exp> ) { <sentencias> }\n");
+                }
+           |    if_else_exp TOK_ELSE TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA    
+                {
+                    ifthenelse_fin(out, $1.etiqueta);
+                    fprintf(out, ";R51:\t<condicional> ::= if ( <exp> ) { <sentencias> } else { <sentencias> }\n");
+                }
            ;
 
-bucle: TOK_WHILE TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {fprintf(out, ";R52:\t<bucle> ::= while ( <exp> ) { <sentencias> }\n");}
-    ;
+if_exp: TOK_IF TOK_PARENTESISIZQUIERDO exp
+                {
+                    if ($3.tipo != BOOLEAN) {
+                        printf("****Error semantico en lin %ld: Condicion de tipo int.\n",yylin);
+                        return 1;
+                    }
+                    $$.etiqueta = condicional_etiqueta++;
+                    ifthen_inicio(out, $3.es_direccion, $$.etiqueta);
+                };
+
+if_else_exp: if_exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA 
+                {
+                    $$.etiqueta = $1.etiqueta;
+                    ifthenelse_fin_then(out, $1.etiqueta);
+                };
+
+bucle: while_exp TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA
+                { 
+                    while_fin(out, $1.etiqueta);
+                    fprintf(out,";R52:\t<bucle> ::= while ( <exp> ) { <sentencias> }\n");
+                };
+
+while_exp: while TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO
+                {
+                    if($3.tipo != BOOLEAN) {
+                        printf("****Error semantico en lin %ld: Condicion de tipo int.\n",yylin);
+                        delete_table(table);
+                        return 1;
+                    }
+                    $$.etiqueta = $1.etiqueta;
+                    while_exp_pila(out, $3.es_direccion, $$.etiqueta);  
+                };
+
+while: TOK_WHILE
+                {
+                $$.etiqueta = etiqueta++;
+                while_inicio(out, $$.etiqueta);
+                };
 
 lectura: TOK_SCANF identificador    {fprintf(out, ";R54:\t<lectura> ::= scanf <identificador>\n");}
     ;
