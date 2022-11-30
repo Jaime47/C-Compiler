@@ -1,5 +1,7 @@
+########
 CC=gcc
 CFLAGS= -g -I./src -I./include -I./object
+########
 
 all:
 	mkdir -p ./include
