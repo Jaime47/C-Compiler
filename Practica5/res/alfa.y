@@ -11,6 +11,13 @@ int yylex();
 void yyerror();
 // Incializacion de variables alfa
 
+/**
+ *Nota inicial:
+ * 
+ *Por motivos de estructura las macros #define utilizadas en el fichero provienen en su mayoria
+ * de las enumeraciones del fichero hashing.h 
+ */
+
 extern long yylin;
 extern long yycol;
 
@@ -21,23 +28,23 @@ extern int error_not_allowed_symbol;
 
 extern FILE * yyout;
 
-int f_return = 0;
-int f_type = 0;
-int f_num_args = 0;
+int f_return = 0;                        /*RETORNO DE LA FUNCION*/
+int f_type = 0;                          /*TIPO DE LA FUNCION*/
+int f_num_args = 0;                      /*NUMERO DE ARGUMENTOS DE LA FUNCION*/
 
 int label = 0;
-int llamada_funcion = 0;
+int llamada_funcion = 0;                /* Indica si efectivamente hay una funcion siendo llamada*/
 
 int cardinal_args_funcion = 0;
 
 // Inicializacion de variables hash
 
-int current_size = 0;
+int current_size = 0;                   /*TAMANIO VECTOR MAX 64*/
 ElementCathegory current_cathegory;
 DataType current_data_type;
-DataComplexity current_data_complexity;
-ArgsInfo current_args_info;
-ArgsInfo current_local_args_info;
+DataComplexity current_data_complexity; /*CLASE ACTUAL: ESCALAR O VECTOR*/
+ArgsInfo current_params_info;             /*Numero de parametros actual y posicion*/
+ArgsInfo current_local_vars_info;       /*Numero local de variables actual y posicion*/
 Table * table;
 
 %}
@@ -49,7 +56,7 @@ Table * table;
 %token TOK_MAIN
 %token TOK_INT
 %token TOK_BOOLEAN
-%token TOK_ARRAY
+%token <atributos> TOK_ARRAY
 %token TOK_FUNCTION
 %token TOK_IF
 %token TOK_ELSE
@@ -118,7 +125,7 @@ Table * table;
 
 %%
 
-programa: iniciarTablaHash TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones funciones sentencias TOK_LLAVEDERECHA {fprintf(yyout, ";R1:\t<programa> ::= main { <declaraciones> <funciones> <sentencias> }");
+programa: iniciarTablaHash TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones segmento_init funciones sentencias TOK_LLAVEDERECHA {fprintf(yyout, ";R1:\t<programa> ::= main { <declaraciones> <funciones> <sentencias> }");
 escribir_fin(yyout);
 destroy_table(table);}
         ;
@@ -128,10 +135,15 @@ iniciarTablaHash:
     table = create_table();
     if(!table){
         fprintf(stderr, "Error: Inicializacion tabla hash");
-
+        return 1;
     }
     escribir_subseccion_data(yyout);
     escribir_cabecera_bss(yyout);
+}
+
+segmento_init:
+{
+    escribir_segmento_codigo(yyout);
 }
 
 declaraciones: declaracion                  {fprintf(yyout, ";R2:\t<declaraciones> ::= <declaracion>\n");}
@@ -142,7 +154,7 @@ declaracion: clase identificadores TOK_PUNTOYCOMA {fprintf(yyout, ";R4:\t<declar
            ;
 
 clase: clase_escalar    {current_data_complexity = ESCALAR;fprintf(yyout, ";R5:\t<clase> ::= <clase_escalar>\n");}
-     | clase_vector     {current_data_complexity = ESCALAR;fprintf(yyout, ";R7:\t<clase> ::= <clase_vector>\n");}
+     | clase_vector     {current_data_complexity = VECTOR;fprintf(yyout, ";R7:\t<clase> ::= <clase_vector>\n");}
      ;
 
 clase_escalar: tipo {current_size = 1;fprintf(yyout, ";R9:\t<clase_escalar> ::= <tipo>\n");}
@@ -152,10 +164,12 @@ tipo: TOK_INT       {current_data_type = INT;fprintf(yyout, ";R10:\t<tipo> ::= i
     | TOK_BOOLEAN   {current_data_type = BOOLEAN;fprintf(yyout, ";R11:\t<tipo> ::= boolean\n");}
     ;
 
-clase_vector: TOK_ARRAY tipo TOK_CORCHETEIZQUIERDO constante_entera TOK_CORCHETEDERECHO {current_size = $4.integer_value;
+clase_vector: TOK_ARRAY tipo TOK_CORCHETEIZQUIERDO constante_entera TOK_CORCHETEDERECHO {
+    current_size = $4.integer_value;
     fprintf(yyout, ";R15:\t<clase_vector> ::= array <tipo> [ <constante_entera> ]\n");
+    // Observamos el tamano del vector actual y comprobamos que este dentro de los limites
     if(current_size < 1 || current_size > MAX_VECTOR_LEN){
-        printf("****Error semantico en lin %ld: El tamano del vector <nombre_vector> excede los limites permitidos (1,64).",yylin);
+        printf("****Error semantico en lin %ld: El tamanyo del vector <nombre_vector> excede los limites permitidos (1,64).",yylin);
         destroy_table(table);
         return 1;
     }   
@@ -165,33 +179,34 @@ identificadores: identificador                          {fprintf(yyout, ";R18:\t
                | identificador TOK_COMA identificadores {fprintf(yyout, ";R19:\t<identificadores> ::= <identificador> , <identificadores>\n");}
                ;
 
-funciones: funcion funciones    {fprintf(yyout, ";R20:\t<funciones> ::= <funcion> <funciones>\n");}
-         |                      {fprintf(yyout, ";R21:\t<funciones> ::=\n");escribir_inicio_main(yyout);}
-         ;
+funciones: funcion funciones {fprintf(yyout, ";R20:\t<funciones> ::= <funcion> <funciones>\n");}
+               |                   {fprintf(yyout, ";R21:\t<funciones> ::=\n");
+                                    escribir_inicio_main(yyout);}
+              ;
 
 funcion: fn_declaration sentencias TOK_LLAVEDERECHA
          {
+           Entry *entry;
            fprintf(yyout,";R22:\t<funcion> ::= function <tipo> <identificador> ( <parametros_funcion> ) { <declaraciones_funcion> <sentencias> }\n");
-
            if(f_return < 1)
             {
-                printf("****Error semantico en lin %ld: Funcion %s no tiene sentencia de retorno.\n", yylin, $1.name);
+                printf("****Error semantico en lin %ld: Funcion %s sin sentencia de retorno.\n", yylin, $1.name);
                 destroy_table(table);
                 return 1;
             } 
            shut_down_local_env(table);
-           Entry *entry;
+
            entry = search_entry(table, $1.name);
            if(!entry) {
                 destroy_table(table);
                 return 1;
            }
            
-           entry->global.cardinal = current_args_info.cardinal;
-           entry->cathegory = current_cathegory;
-           current_args_info.cardinal = 0;
-           current_local_args_info.cardinal = 0;
-           current_args_info.position = 0;
+           entry->global.cardinal = current_params_info.cardinal;
+           entry->type = f_type;
+           current_params_info.cardinal = 0;
+           current_local_vars_info.cardinal = 0;
+           current_params_info.position = 0;
          }
        ;
 
@@ -206,10 +221,10 @@ fn_declaration: fn_name TOK_PARENTESISIZQUIERDO parametros_funcion TOK_PARENTESI
                     return 1;
                 }
                 strcpy($$.name, $1.name);
-                entry->global.cardinal = current_args_info.cardinal;
-                entry->global.cardinal = current_local_args_info.cardinal;
-                entry->cathegory = current_cathegory;
-                declararFuncion(yyout, $1.name, current_local_args_info.cardinal);
+                entry->global.cardinal = current_params_info.cardinal;
+                entry->global.cardinal = current_local_vars_info.cardinal;
+                entry->type = f_type;
+                declararFuncion(yyout, $1.name, current_local_vars_info.cardinal);
                 }
               ;
 
@@ -219,11 +234,11 @@ fn_name: TOK_FUNCTION tipo TOK_IDENTIFICADOR
              strcpy($$.name, $3.name);
              // HAY QUE MIRAR LOS ARGUMENTOS DE ESTA LLAMADA
 
-             ArgsInfo entryLocal;
-             ArgsInfo entryGlobal;
+              ArgsInfo entryLocal;
+              ArgsInfo entryGlobal;
 
               entryLocal.cardinal = f_num_args;
-              entryLocal.position = current_local_args_info.position;
+              entryLocal.position = current_local_vars_info.position;
               entryGlobal.cardinal = 0;
               entryGlobal.position = f_num_args; 
 
@@ -231,12 +246,13 @@ fn_name: TOK_FUNCTION tipo TOK_IDENTIFICADOR
              open_local_env(table, $3.name, current_size, VARIABLE, current_data_type,
               current_data_complexity, entryGlobal, entryLocal);
              
-             current_args_info.cardinal = 0;
+             current_params_info.cardinal = 0;
+             current_params_info.position = 0;
              f_return = 0;
              f_type = current_data_type;         
              current_size = 1;
-             current_local_args_info.cardinal = 0;
-             current_args_info.position = 0;
+             current_local_vars_info.cardinal = 0;
+
 
            }
            else {
@@ -257,8 +273,8 @@ resto_parametros_funcion: TOK_PUNTOYCOMA parametro_funcion resto_parametros_func
                         ;
 // CAMBIAR identificador
 parametro_funcion: tipo idpf   {fprintf(yyout, ";R27:\t<parametro_funcion> ::= <tipo> <identificador>\n");
-                     current_args_info.position++;
-                     current_args_info.cardinal++;}
+                     current_params_info.cardinal++;
+                     current_params_info.position++;}
                  ;
 
 declaraciones_funcion: declaraciones    {fprintf(yyout, ";R28:\t<declaraciones_funcion> ::= <declaraciones>\n");}
@@ -294,7 +310,7 @@ asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp
                 return 1;  
               }
 
-              if(entry->complexity == VECTOR || entry->cathegory == FUNCION || entry->data != $3.type) {
+              if(entry->complexity == VECTOR || entry->cathegory == FUNCION || entry->type != $3.type) {
                 printf("****Error semantico en lin %ld: Asignacion incompatible.\n", yylin);
                 destroy_table(table);
                 return 1;
@@ -342,23 +358,22 @@ elemento_vector: TOK_IDENTIFICADOR TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO
                     Entry *entry;
                     entry = search_entry(table, $1.name);
 
-                    if(!entry) {
+                   if(!entry) {
                         printf("****Error semantico en lin %ld: Acceso a variable no declarada (%s).\n", yylin, $1.name);
                         destroy_table(table);
                         return 1;  
-                    }
-
+                   }
                    if(entry->complexity != VECTOR) {
-                     printf("****Error semantico en lin %ld: Indexando variable no vectorial.\n",yylin);
+                     printf("****Error semantico en lin %ld: Intento de indexacion de una variable que no es de tipo vector.\n",yylin);
                      destroy_table(table);
                      return 1;
                    }
                    if($3.type != INT){
-                     printf("****Error semantico en lin %ld: El indice debe ser de tipo entero.\n",yylin);
+                     printf("****Error semantico en lin %ld: El indice en una operacion de indexacion tiene que ser de tipo entero.\n",yylin);
                      destroy_table(table);
                      return 1;
                    }
-                   $$.type = entry->data;
+                   $$.type = entry->type;
                    $$.is_address = 1;
                    $$.integer_value = $3.integer_value;
 
@@ -382,7 +397,7 @@ condicional:    if_exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_L
 if_exp: TOK_IF TOK_PARENTESISIZQUIERDO exp
                 {
                     if ($3.type != BOOLEAN) {
-                        printf("****Error semantico en lin %ld: Condicion de tipo int.\n",yylin);
+                        printf("****Error semantico en lin %ld: Condicional con condicion de tipo int.\n",yylin);
                         return 1;
                     }
                     $$.label = label++;
@@ -404,7 +419,7 @@ bucle: while_exp TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA
 while_exp: while TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO
                 {
                     if($3.type != BOOLEAN) {
-                        printf("****Error semantico en lin %ld: Condicion de tipo int.\n",yylin);
+                        printf("****Error semantico en lin %ld: Condicional con condicion de tipo int.\n",yylin);
                         destroy_table(table);
                         return 1;
                     }
@@ -430,11 +445,11 @@ lectura: TOK_SCANF TOK_IDENTIFICADOR
                     }
                   
                     if (entry->complexity == VECTOR || entry->cathegory == FUNCION) {
-                      printf("****Error semantico en lin %ld: Variable local de tipo no escalar.\n", yylin);
-                          destroy_table(table);
-                          return 1;  
+                        printf("****Error semantico en lin %ld: Variable local de tipo no escalar.\n", yylin);
+                        destroy_table(table);
+                        return 1;  
                     }
-                    leer(yyout, $2.name, entry->data);
+                    leer(yyout, $2.name, entry->type);
                     fprintf(yyout,";R54:\t<lectura> ::= scanf <identificador>\n");
                   }
                 ; 
@@ -546,7 +561,7 @@ exp: exp TOK_MAS exp
                 | exp TOK_OR exp
                   { 
                     if($1.type == INT || $3.type == INT) {
-                      printf("****Error semantico en lin %ld: Operacion aritmetica con operandos int.\n", yylin);
+                      printf("****Error semantico en lin %ld: Operacion logica con operandos int.\n", yylin);
                       destroy_table(table);
                       return 1;
                     } 
@@ -586,14 +601,14 @@ exp: exp TOK_MAS exp
                       destroy_table(table);
                       return 1;
                     }
-                    $$.type = entry->data;
+                    $$.type = entry->type;
                     $$.is_address = 1;
                     if (entry->cathegory == PARAMETRO) {
-                      escribirParametro(yyout, entry->global.position, current_args_info.cardinal);
+                      escribirParametro(yyout, entry->global.position, current_params_info.cardinal);
                     }
                     else if (entry->cathegory == VARIABLE) {
                       if (table->env == LOCAL) {
-                        escribirVariableLocal(yyout, entry->global.position);
+                        escribirVariableLocal(yyout, entry->local.position);
                       }
                       else {
                         escribir_operando(yyout, $1.name, 1);
@@ -639,11 +654,11 @@ exp: exp TOK_MAS exp
                       return 1;
                     }
                     if (f_num_args != entry->global.cardinal) {
-                      printf("****Error semantico en lin %ld: Numero incorrecto de parametros en llamada.\n", yylin);
+                      printf("****Error semantico en lin %ld: Numero incorrecto de parametros en llamada a funcion.\n", yylin);
                       destroy_table(table);
                       return 1;
                     }
-                    $$.type = entry->data;
+                    $$.type = entry->type;
                     llamarFuncion(yyout, $1.name, entry->global.cardinal);
                     llamada_funcion = 0;
 
@@ -654,16 +669,15 @@ exp: exp TOK_MAS exp
 idf_llamada_funcion: TOK_IDENTIFICADOR
                   {
                     Entry* entry;
-
-                    entry = search_entry(table, $1.name);
-                    if (!entry) {
-                      printf("****Error semantico en lin %ld: Acceso a variable no declarada (%s).\n", yylin, $1.name);
+                    if (llamada_funcion == 1) {
+                      printf("****Error semantico en lin %ld: No esta permitido el uso de llamadas a funciones como parametros de otras funciones.\n", yylin);
                       destroy_table(table);
                       return 1;
                     }
 
-                    if (llamada_funcion == 1) {
-                      printf("****Error semantico en lin %ld: No esta permitido el uso de llamadas a funciones como parametros de otras funciones.\n", yylin);
+                    entry = search_entry(table, $1.name);
+                    if (!entry) {
+                      printf("****Error semantico en lin %ld: Acceso a variable no declarada (%s).\n", yylin, $1.name);
                       destroy_table(table);
                       return 1;
                     }
@@ -676,7 +690,9 @@ idf_llamada_funcion: TOK_IDENTIFICADOR
 
 lista_expresiones: argPila resto_lista_expresiones  
                   {
+                    if(llamada_funcion == 1) {
                       f_num_args += 1;
+                    }
                       fprintf(yyout, ";R89:\t<lista_expresiones> ::= <exp> <resto_lista_expresiones>\n");
                   }
                 | {fprintf(yyout, ";R90:\t<lista_expresiones> ::=\n");}
@@ -684,7 +700,9 @@ lista_expresiones: argPila resto_lista_expresiones
 
 resto_lista_expresiones: TOK_COMA argPila resto_lista_expresiones   
                   {
-                      f_num_args += 1;
+                      if(llamada_funcion == 1) {
+                        f_num_args += 1;
+                      }
                       fprintf(yyout, ";R91:\t<resto_lista_expresiones> ::= , <exp> <resto_lista_expresiones>\n");
                   }
               |   {fprintf(yyout, ";R92:\t<resto_lista_expresiones> ::=\n");}
@@ -700,6 +718,7 @@ comparacion: exp TOK_IGUAL exp
                   {
                       if ($1.type != INT || $3.type != INT) {
                           printf("****Error semantico en lin %ld: Comparacion con operandos boolean.\n",yylin);
+                          destroy_table(table);                          
                           return 1;
                       }
                       $$.type = BOOLEAN;
@@ -714,6 +733,7 @@ comparacion: exp TOK_IGUAL exp
                   {
                       if ($1.type != INT || $3.type != INT) {
                           printf("****Error semantico en lin %ld: Comparacion con operandos boolean.\n",yylin);
+                          destroy_table(table);                          
                           return 1;
                       }
                       $$.type = BOOLEAN;
@@ -728,6 +748,7 @@ comparacion: exp TOK_IGUAL exp
                   {
                       if ($1.type != INT || $3.type != INT) {
                           printf("****Error semantico en lin %ld: Comparacion con operandos boolean.\n",yylin);
+                          destroy_table(table);                          
                           return 1;
                       }
                       $$.type = BOOLEAN;
@@ -742,6 +763,7 @@ comparacion: exp TOK_IGUAL exp
                   {
                       if ($1.type != INT || $3.type != INT) {
                           printf("****Error semantico en lin %ld: Comparacion con operandos boolean.\n",yylin);
+                          destroy_table(table);                          
                           return 1;
                       }
                       $$.type = BOOLEAN;
@@ -756,6 +778,7 @@ comparacion: exp TOK_IGUAL exp
                   {
                       if ($1.type != INT || $3.type != INT) {
                           printf("****Error semantico en lin %ld: Comparacion con operandos boolean.\n",yylin);
+                          destroy_table(table);
                           return 1;
                       }
                       $$.type = BOOLEAN;
@@ -770,6 +793,7 @@ comparacion: exp TOK_IGUAL exp
                   {
                       if ($1.type != INT || $3.type != INT) {
                           printf("****Error semantico en lin %ld: Comparacion con operandos boolean.\n",yylin);
+                          destroy_table(table);                          
                           return 1;
                       }
                       $$.type = BOOLEAN;
@@ -805,7 +829,6 @@ constante_logica: TOK_TRUE
                       /* Checkeamos la semantica*/
                         $$.type = BOOLEAN;
                         $$.is_address = 0;
-                        $$.integer_value = 1;
 
                         char type[2];
 
@@ -818,7 +841,6 @@ constante_logica: TOK_TRUE
                       /* Checkeamos la semantica*/
                         $$.type = BOOLEAN;
                         $$.is_address = 0;
-                        $$.integer_value = 1;
 
                         char type[2];
 
@@ -847,17 +869,15 @@ identificador: TOK_IDENTIFICADOR
                   ArgsInfo entryGlobal;
 
                   entryLocal.cardinal = 0;
-                  entryLocal.position = current_local_args_info.cardinal;
-                  entryGlobal.cardinal = f_num_args;
-                  entryGlobal.position = current_local_args_info.position;
+                  entryLocal.position = current_local_vars_info.cardinal;
+                  entryGlobal.cardinal = current_params_info.cardinal;
+                  entryGlobal.position = current_local_vars_info.position;
 
                  if (table->env == LOCAL) {
-                   current_local_args_info.position++;
-                   current_local_args_info.cardinal++;
-                  
+                   current_local_vars_info.position++;
+                   current_local_vars_info.cardinal++;
 
-
-                   if(insert_entry(table, create_entry($1.name,current_size, VARIABLE, current_data_type,
+                   if(insert_entry(table, create_entry($1.name, current_size, VARIABLE, current_data_type,
                                          current_data_complexity, entryGlobal, entryLocal)) == 1) {
                      printf("****Error semantico en lin %ld: Declaracion duplicada.\n", yylin);
                      destroy_table(table);
@@ -888,7 +908,7 @@ idpf: TOK_IDENTIFICADOR
                 entryLocal.cardinal = 0;
                 entryLocal.position = 0;
                 entryGlobal.cardinal = 0;
-                entryGlobal.position = current_args_info.position;
+                entryGlobal.position = current_params_info.position;
 
                 if(insert_entry(table, create_entry($1.name,1,PARAMETRO, current_data_type,ESCALAR, entryGlobal, entryLocal)) == 1) {
                   destroy_table(table);
@@ -908,6 +928,6 @@ idpf: TOK_IDENTIFICADOR
 
 void yyerror(const char * s) {
     if(!error_not_allowed_symbol) {
-        printf("****Error sintactico en [lin %ld, col %ld]\n", yylin, yycol);
+        printf("****Error semantico en lin %ld, col %ld\n", yylin, yycol);
     }
 }

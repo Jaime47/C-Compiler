@@ -42,7 +42,7 @@ typedef struct Entry
   char *key;
   int size;
   ElementCathegory cathegory;
-  DataType data;
+  DataType type;
   DataComplexity complexity;
   ArgsInfo global;
   ArgsInfo local;
@@ -61,12 +61,12 @@ Table *create_table();
 void destroy_table(Table *table);
 
 int open_local_env(Table *table, char *key, int size, ElementCathegory cathegory,
-                   DataType data, DataComplexity complexity, ArgsInfo global, ArgsInfo local);
+                   DataType type, DataComplexity complexity, ArgsInfo global, ArgsInfo local);
 
 int shut_down_local_env(Table *table);
 
 Entry *create_entry(char *key, int size, ElementCathegory cathegory,
-                    DataType data, DataComplexity complexity, ArgsInfo global, ArgsInfo local);
+                    DataType type, DataComplexity complexity, ArgsInfo global, ArgsInfo local);
 
 int insert_entry(Table *table, Entry *entry);
 

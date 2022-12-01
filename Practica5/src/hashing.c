@@ -27,20 +27,11 @@ Table *create_table()
   }
 
   table->local = (Entry **)calloc(1, sizeof(Entry *));
-  if (!table->local)
-  {
-    free(table);
-    return NULL;
-  }
+
   *(table->local) = NULL;
 
   table->global = (Entry **)calloc(1, sizeof(Entry *));
-  if (!table->global)
-  {
-    free(table->local);
-    free(table);
-    return NULL;
-  }
+
   *(table->global) = NULL;
 
   table->env = GLOBAL;
@@ -73,7 +64,7 @@ void destroy_table(Table *table)
 }
 
 int open_local_env(Table *table, char *key, int size, ElementCathegory cathegory,
-                   DataType data, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
+                   DataType type, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
 {
 
   Entry *entry1 = NULL;
@@ -84,8 +75,8 @@ int open_local_env(Table *table, char *key, int size, ElementCathegory cathegory
     return 1;
   }
   // PREGUNTA POR QUE ESTOY CREANDO DOS ELEMENTOS, Y NO METO EL MISMO EN LAS DOS TABLAS
-  entry1 = create_entry(key, size, cathegory, data, complexity, global, local);
-  entry2 = create_entry(key, size, cathegory, data, complexity, global, local);
+  entry1 = create_entry(key, size, cathegory, type, complexity, global, local);
+  entry2 = create_entry(key, size, cathegory, type, complexity, global, local);
 
   if (!entry1 || !entry2)
   {
@@ -123,7 +114,7 @@ int shut_down_local_env(Table *table)
 }
 
 Entry *create_entry(char *key, int size, ElementCathegory cathegory,
-                    DataType data, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
+                    DataType type, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
 {
 
   Entry *entry = NULL;
@@ -135,10 +126,12 @@ Entry *create_entry(char *key, int size, ElementCathegory cathegory,
     return NULL;
   }
 
-  entry->key = key;
+  entry->key = (char*) calloc(1, sizeof(char) * (strlen(key) + 1));
+
+  strcpy(entry->key, key);
   entry->size = size;
   entry->cathegory = cathegory;
-  entry->data = data;
+  entry->type = type;
   entry->complexity = complexity;
   // Cuidado con esto, cuanto tiempo permanece en memoria?
   entry->global = global;
@@ -155,10 +148,23 @@ Entry *create_entry(char *key, int size, ElementCathegory cathegory,
  */
 int insert_entry(Table *table, Entry *entry)
 {
-  if (!table || !entry)
-    return 1;
 
-  if (search_entry(table, entry->key) != NULL)
+  // if (search_entry(table, entry->key) != NULL)
+  //{
+  //   return 1;
+  // }
+  Entry* test = NULL;
+  if (table->env == GLOBAL)
+  {
+    HASH_FIND_STR(*(table->global), entry->key, test);
+  }
+
+  else
+  {
+    HASH_FIND_STR(*(table->local), entry->key, test);
+  }
+
+  if (test != NULL)
   {
     return 1;
   }
@@ -182,9 +188,6 @@ int insert_entry(Table *table, Entry *entry)
  */
 Entry *search_entry(Table *table, char *key)
 {
-  if (!table || !key)
-    return NULL;
-
   Entry *entry = NULL;
 
   if (table->env == GLOBAL)
@@ -201,10 +204,6 @@ Entry *search_entry(Table *table, char *key)
 
       HASH_FIND_STR(*(table->global), key, entry);
     }
-  }
-  if (!entry)
-  {
-    return NULL;
   }
 
   return entry;

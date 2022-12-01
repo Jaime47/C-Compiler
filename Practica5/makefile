@@ -1,9 +1,5 @@
-
-####################################################
 CC=gcc
 CFLAGS= -g -I./src -I./include -I./object
-####################################################
-.PHONY: clean
 
 all:
 	mkdir -p ./include
@@ -11,7 +7,7 @@ all:
 	@make alfa
 
 alfa: y.tab.o lex.yy.o hashing.o
-	$(CC) $(CFLAGS) ./src/main.c ./object/y.tab.o ./object/lex.yy.o ./object/hashing.o ./src/generacion.c -o alfa
+	$(CC) $(CFLAGS) ./src/alfa.c ./object/y.tab.o ./object/lex.yy.o ./object/hashing.o ./src/generacion.c -o alfa
 
 hashing.o: ./src/hashing.c ./include/hashing.h
 	$(CC) $(CFLAGS) -c ./src/hashing.c
@@ -33,12 +29,12 @@ lex.yy.c: ./res/alfa.l ./include/y.tab.h ./include/alfa.h ./include/generacion.h
 	mv lex.yy.c ./src
 
 clean:
+	@rm -rf ./include/y.tab.h
+	@rm -rf ./src/y.tab.c
+	@rm -rf ./src/lex.yy.c
 	@rm -rf ./object/lex.yy.o
 	@rm -rf ./object/y.tab.o
 	@rm -rf ./object/hashing.o
 	@rm -rf ./object/generacion.o
-	@rm -rf ./include/y.tab.h
-	@rm -rf ./src/y.tab.c
-	@rm -rf ./src/lex.yy.c
 	@rm -rf y.output
 	@rm -rf alfa

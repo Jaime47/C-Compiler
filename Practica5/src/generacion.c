@@ -29,8 +29,8 @@ void escribir_subseccion_data(FILE *fpasm)
   {
     fprintf(fpasm, "\n");
     fprintf(fpasm, "segment .data\n");
-    fprintf(fpasm, "  _msg_error_div_zero db \"Error: Division entre cero\", 0\n");
-    fprintf(fpasm, "  _msg_error_index_out_of_range db \"Error: Indice fuera de rango\", 0\n");
+    fprintf(fpasm, "  _msg_error_div_zero db \"****Error de ejecucion: Division por cero.\", 0\n");
+    fprintf(fpasm, "  _msg_error_index_out_of_range db \"****Error de ejecucion: Indice fuera de rango.\", 0\n");
   }
   return;
 }
@@ -582,10 +582,6 @@ void leer(FILE *fpasm, char *nombre, int tipo)
   {
     fprintf(fpasm, "  call scan_boolean\n");
   }
-  else
-  {
-    printf("[DEBUG] Error: leer: int tipo no es ni 0 ni 1");
-  }
   // Arreglar la pila
   fprintf(fpasm, "  add esp, 4\n");
   return;
@@ -611,10 +607,6 @@ void escribir(FILE *fpasm, int es_variable, int tipo)
   else if (tipo == BOOLEANO)
   {
     fprintf(fpasm, "  call print_boolean\n");
-  }
-  else
-  {
-    printf("[DEBUG] Error: escribir: int tipo no es ni 0 ni 1");
   }
   // Final de linea
   fprintf(fpasm, "  call print_endofline\n");
