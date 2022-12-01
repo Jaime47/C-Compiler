@@ -4,18 +4,17 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "hashing.h"
+#include "alfa.h"
+#include "generacion.h"
 
-extern FILE *in;
-extern FILE *out;
-
-extern int yylex();
-extern int yyparse();
+int yylex();
+int yyparse();
 
 int main(int argc, char **argv)
 {
+  extern FILE *yyin;
+  extern FILE *yyout;
 
   if (argc != 3)
   {
@@ -23,22 +22,23 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  in = fopen(argv[1], "r");
-  if (!in)
+  yyin = fopen(argv[1], "r");
+  yyout = fopen(argv[2], "w");
+  if (!yyin)
   {
     printf("Error: Fichero entrada\n");
     return 1;
   }
-  out = fopen(argv[2], "w");
-  if (!out)
+
+  if (!yyout)
   {
     printf("Error: Fichero salida\n");
     return 1;
   }
-
   yyparse();
-  fclose(in);
-  fclose(out);
+
+  fclose(yyin);
+  fclose(yyout);
 
   return 0;
 }
