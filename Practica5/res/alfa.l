@@ -108,9 +108,9 @@ ERROR		.
 {TRUE}      { yycol += yyleng; fprintf(yyout, ";D:\ttrue\n"); return TOK_TRUE; }
 {FALSE}     { yycol += yyleng; fprintf(yyout, ";D:\tfalse\n"); return TOK_FALSE; }
 
-{IDENTIFICADORERROR}    { yycol+=yyleng; error_id_out_of_range = 1; return TOK_ERROR; }
+{IDENTIFICADORERROR}    { yycol+=yyleng; fprintf(stderr, "****Error en linea %ld: \n", yylin); error_id_out_of_range = 1; return TOK_ERROR; }
 {IDENTIFICADOR}         { yycol+=yyleng; strcpy(yylval.atributos.name, yytext); fprintf(yyout, ";D:\t%s\n", yytext); return TOK_IDENTIFICADOR; }
 {CONSTANTENTERA}        { yycol+=yyleng; yylval.atributos.integer_value = atoi( yytext ); fprintf(yyout, ";D:\t%s\n", yytext); return TOK_CONSTANTE_ENTERA; }
-
-{ERROR}     { yycol += yyleng; error_not_allowed_symbol = 1; return TOK_ERROR; }
+    
+{ERROR}     { yycol += yyleng; fprintf(stderr, "****Error en linea %ld: \n", yylin); error_not_allowed_symbol = 1; return TOK_ERROR; }
 %%

@@ -125,7 +125,7 @@ Table * table;
 
 %%
 
-programa: iniciarTablaHash TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones segmento_init funciones sentencias TOK_LLAVEDERECHA {fprintf(yyout, ";R1:\t<programa> ::= main { <declaraciones> <funciones> <sentencias> }");
+programa: iniciarTablaHash TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones segmento_init funciones sentencias TOK_LLAVEDERECHA {fprintf(yyout, ";R1:\t<programa> ::= main { <declaraciones> <funciones> <sentencias> }\n");
 escribir_fin(yyout);
 destroy_table(table);}
         ;
@@ -179,8 +179,8 @@ identificadores: identificador                          {fprintf(yyout, ";R18:\t
                | identificador TOK_COMA identificadores {fprintf(yyout, ";R19:\t<identificadores> ::= <identificador> , <identificadores>\n");}
                ;
 
-funciones: funcion funciones {fprintf(yyout, ";R20:\t<funciones> ::= <funcion> <funciones>\n");}
-               |                   {fprintf(yyout, ";R21:\t<funciones> ::=\n");
+funciones: funcion funciones {fprintf(yyout,";R20:\t<funciones> ::= <funcion> <funciones>\n");}
+               |                   {fprintf(yyout,";R21:\t<funciones> ::= \n");
                                     escribir_inicio_main(yyout);}
               ;
 
@@ -220,10 +220,11 @@ fn_declaration: fn_name TOK_PARENTESISIZQUIERDO parametros_funcion TOK_PARENTESI
                     destroy_table(table);
                     return 1;
                 }
-                strcpy($$.name, $1.name);
+
                 entry->global.cardinal = current_params_info.cardinal;
                 entry->global.cardinal = current_local_vars_info.cardinal;
                 entry->type = f_type;
+                strcpy($$.name, $1.name);
                 declararFuncion(yyout, $1.name, current_local_vars_info.cardinal);
                 }
               ;
@@ -396,12 +397,13 @@ condicional:    if_exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_L
 
 if_exp: TOK_IF TOK_PARENTESISIZQUIERDO exp
                 {
-                    if ($3.type != BOOLEAN) {
-                        printf("****Error semantico en lin %ld: Condicional con condicion de tipo int.\n",yylin);
-                        return 1;
-                    }
-                    $$.label = label++;
-                    ifthen_inicio(yyout, $3.is_address, $$.label);
+                  if ($3.type != BOOLEAN) {
+                      printf("****Error semantico en lin %ld: Condicional con condicion de tipo int.\n",yylin);
+                      destroy_table(table);
+                      return 1;
+                  }
+                  $$.label = label++;
+                  ifthen_inicio(yyout, $3.is_address, $$.label);
                 };
 
 if_else_exp: if_exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA 
@@ -429,8 +431,8 @@ while_exp: while TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO
 
 while: TOK_WHILE
                 {
-                $$.label = label++;
-                while_inicio(yyout, $$.label);
+                  $$.label = label++;
+                  while_inicio(yyout, $$.label);
                 };
 
 lectura: TOK_SCANF TOK_IDENTIFICADOR
@@ -688,31 +690,27 @@ idf_llamada_funcion: TOK_IDENTIFICADOR
                   }
                 ;
 
-lista_expresiones: argPila resto_lista_expresiones  
-                  {
-                    if(llamada_funcion == 1) {
-                      f_num_args += 1;
-                    }
-                      fprintf(yyout, ";R89:\t<lista_expresiones> ::= <exp> <resto_lista_expresiones>\n");
-                  }
-                | {fprintf(yyout, ";R90:\t<lista_expresiones> ::=\n");}
-                ;
-
-resto_lista_expresiones: TOK_COMA argPila resto_lista_expresiones   
-                  {
+lista_expresiones: exp resto_lista_expresiones
+                   { 
+                     fprintf(yyout,";R89:\t<lista_expresiones> ::= <exp>  <resto_lista_expresiones> \n");
                       if(llamada_funcion == 1) {
-                        f_num_args += 1;
+                        f_num_args++;
                       }
-                      fprintf(yyout, ";R91:\t<resto_lista_expresiones> ::= , <exp> <resto_lista_expresiones>\n");
-                  }
-              |   {fprintf(yyout, ";R92:\t<resto_lista_expresiones> ::=\n");}
-              ;
+                   }
+                 |
+                   { fprintf(yyout,";R90:\t<lista_expresiones> ::= \n"); }
+                 ;
 
-argPila: exp
-                  {
-                      operandoEnPilaAArgumento(yyout, $1.is_address);
-                  }
-              ;
+resto_lista_expresiones: TOK_COMA exp resto_lista_expresiones 
+                         {
+                           fprintf(yyout,";R91:\t<resto_lista_expresiones> ::= , <exp>  <resto_lista_expresiones> \n");
+                           if(llamada_funcion == 1) {
+                             f_num_args++;
+                           }
+                         }
+                       |
+                         { fprintf(yyout,";R92:\t<resto_lista_expresiones> ::= \n"); } 
+                       ;
 
 comparacion: exp TOK_IGUAL exp      
                   {
@@ -721,11 +719,10 @@ comparacion: exp TOK_IGUAL exp
                           destroy_table(table);                          
                           return 1;
                       }
-                      $$.type = BOOLEAN;
-                      $$.is_address = 0;
-
                       igual(yyout, $1.is_address, $3.is_address, label);
                       label += 1;
+                      $$.type = BOOLEAN;
+                      $$.is_address = 0;
 
                       fprintf(yyout, ";R93:\t<comparacion> ::= <exp> == <exp>\n");
                   }
@@ -736,11 +733,11 @@ comparacion: exp TOK_IGUAL exp
                           destroy_table(table);                          
                           return 1;
                       }
-                      $$.type = BOOLEAN;
-                      $$.is_address = 0;
 
                       distinto(yyout, $1.is_address, $3.is_address, label);
                       label += 1;
+                      $$.type = BOOLEAN;
+                      $$.is_address = 0;
 
                       fprintf(yyout, ";R94:\t<comparacion> ::= <exp> != <exp>\n");
                   }
@@ -751,11 +748,11 @@ comparacion: exp TOK_IGUAL exp
                           destroy_table(table);                          
                           return 1;
                       }
-                      $$.type = BOOLEAN;
-                      $$.is_address = 0;
 
                       menor_igual(yyout, $1.is_address, $3.is_address, label);
                       label += 1;
+                      $$.type = BOOLEAN;
+                      $$.is_address = 0;
 
                       fprintf(yyout, ";R95:\t<comparacion> ::= <exp> <= <exp>\n");
                   }
@@ -766,11 +763,11 @@ comparacion: exp TOK_IGUAL exp
                           destroy_table(table);                          
                           return 1;
                       }
-                      $$.type = BOOLEAN;
-                      $$.is_address = 0;
 
                       mayor_igual(yyout, $1.is_address, $3.is_address, label);
                       label += 1;
+                      $$.type = BOOLEAN;
+                      $$.is_address = 0;
 
                       fprintf(yyout, ";R96:\t<comparacion> ::= <exp> >= <exp>\n");
                   }
@@ -781,11 +778,12 @@ comparacion: exp TOK_IGUAL exp
                           destroy_table(table);
                           return 1;
                       }
-                      $$.type = BOOLEAN;
-                      $$.is_address = 0;
+
 
                       menor(yyout, $1.is_address, $3.is_address, label);
                       label += 1;
+                      $$.type = BOOLEAN;
+                      $$.is_address = 0;
 
                       fprintf(yyout, ";R97:\t<comparacion> ::= <exp> < <exp>\n");
                   }
@@ -796,11 +794,11 @@ comparacion: exp TOK_IGUAL exp
                           destroy_table(table);                          
                           return 1;
                       }
-                      $$.type = BOOLEAN;
-                      $$.is_address = 0;
 
                       mayor(yyout, $1.is_address, $3.is_address, label);
                       label += 1;
+                      $$.type = BOOLEAN;
+                      $$.is_address = 0;
 
                       fprintf(yyout, ";R98:\t<comparacion> ::= <exp> > <exp>\n");
                   }
@@ -811,7 +809,6 @@ constante: constante_logica
                       /* Checkeamos la semantica*/
                       $$.type = $1.type;
                       $$.is_address = $1.is_address;
-                      $$.integer_value = $1.integer_value;
                       fprintf(yyout, ";R99:\t<constante> ::= <constante_logica>\n");
                   }
           | constante_entera 
@@ -819,7 +816,6 @@ constante: constante_logica
                       /* Checkeamos la semantica*/
                       $$.type = $1.type;
                       $$.is_address = $1.is_address;
-                      $$.integer_value = $1.integer_value;
                       fprintf(yyout, ";R100:\t<constante> ::= <constante_entera>\n");
                   }
                   ;
@@ -830,10 +826,10 @@ constante_logica: TOK_TRUE
                         $$.type = BOOLEAN;
                         $$.is_address = 0;
 
-                        char type[2];
+                        char tok[2];
 
-                        sprintf(type, "1");
-                        escribir_operando(yyout, type, 0);
+                        sprintf(tok, "1");
+                        escribir_operando(yyout, tok, 0);
                         fprintf(yyout, ";R102:\t<constante_logica> ::= true\n");
                     }
                 | TOK_FALSE 
@@ -842,10 +838,10 @@ constante_logica: TOK_TRUE
                         $$.type = BOOLEAN;
                         $$.is_address = 0;
 
-                        char type[2];
+                        char tok[2];
 
-                        sprintf(type, "0");
-                        escribir_operando(yyout, type, 0);
+                        sprintf(tok, "0");
+                        escribir_operando(yyout, tok, 0);
                         fprintf(yyout, ";R103:\t<constante_logica> ::= false\n");
                     }
                     ;
@@ -855,9 +851,9 @@ constante_entera: TOK_CONSTANTE_ENTERA
                       $$.is_address = 0;
                       $$.integer_value = $1.integer_value;
                       $$.type = INT;
-                      char c[MAX_INT_SIZE];
-                      sprintf(c, "%d", $$.integer_value);
-                      escribir_operando(yyout, c, 0);
+                      char tok[MAX_INT_SIZE];
+                      sprintf(tok, "%d", $$.integer_value);
+                      escribir_operando(yyout, tok, 0);
                       fprintf(yyout,";R104:\t<constante_entera> ::= TOK_CONSTANTE_ENTERA\n");
                     }
                     ;

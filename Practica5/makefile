@@ -1,6 +1,8 @@
 CC=gcc
 CFLAGS= -g -I./src -I./include -I./object
 
+TEST_DIR=./ejemplos
+
 all:
 	mkdir -p ./include
 	mkdir -p ./object
@@ -27,6 +29,41 @@ y.tab.c: ./res/alfa.y
 lex.yy.c: ./res/alfa.l ./include/y.tab.h ./include/alfa.h ./include/generacion.h ./include/hashing.h
 	flex ./res/alfa.l
 	mv lex.yy.c ./src
+
+#####
+# CASOS DE TEST PARA DIFERENTES FUNCIONALIDADES
+#####
+
+
+factorial:
+	./alfa $(TEST_DIR)/factorial.alfa $(TEST_DIR)/factorial.asm
+	nasm -g -o $(TEST_DIR)/factorial.o -f elf32 $(TEST_DIR)/factorial.asm
+	gcc -Wall -g -m32 -o $(TEST_DIR)/factorial $(TEST_DIR)/factorial.o alfalib.o
+	./$(TEST_DIR)/factorial
+
+condicionales:
+	./alfa $(TEST_DIR)/condicionales.alfa $(TEST_DIR)/condicionales.asm
+	nasm -g -o $(TEST_DIR)/condicionales.o -f elf32 $(TEST_DIR)/condicionales.asm
+	gcc -Wall -g -m32 -o $(TEST_DIR)/condicionales $(TEST_DIR)/condicionales.o alfalib.o
+	./$(TEST_DIR)/condicionales
+
+funciones:
+	./alfa $(TEST_DIR)/funciones.alfa $(TEST_DIR)/funciones.asm
+	nasm -g -o $(TEST_DIR)/funciones.o -f elf32 $(TEST_DIR)/funciones.asm
+	gcc -Wall -g -m32 -o $(TEST_DIR)/funciones $(TEST_DIR)/funciones.o alfalib.o
+	./$(TEST_DIR)/funciones
+
+fibonacci:
+	./alfa $(TEST_DIR)/fibonacci.alfa $(TEST_DIR)/fibonacci.asm
+	nasm -g -o $(TEST_DIR)/fibonacci.o -f elf32 $(TEST_DIR)/fibonacci.asm
+	gcc -Wall -g -m32 -o $(TEST_DIR)/fibonacci $(TEST_DIR)/fibonacci.o alfalib.o
+	./$(TEST_DIR)/fibonacci
+
+funciones_vectores:
+	./alfa $(TEST_DIR)/funciones_vectores.alfa $(TEST_DIR)/funciones_vectores.asm
+	nasm -g -o $(TEST_DIR)/funciones_vectores.o -f elf32 $(TEST_DIR)/funciones_vectores.asm
+	gcc -Wall -g -m32 -o $(TEST_DIR)/funciones_vectores $(TEST_DIR)/funciones_vectores.o alfalib.o
+	./$(TEST_DIR)/funciones_vectores
 
 clean:
 	@rm -rf ./include/y.tab.h

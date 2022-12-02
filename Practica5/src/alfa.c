@@ -8,14 +8,12 @@
 #include "alfa.h"
 #include "generacion.h"
 
-int yylex();
+extern FILE *yyin;
+extern FILE *yyout;
 int yyparse();
 
 int main(int argc, char **argv)
 {
-  extern FILE *yyin;
-  extern FILE *yyout;
-
   if (argc != 3)
   {
     printf("Error: Numero incorrecto de params de entrada\n");
