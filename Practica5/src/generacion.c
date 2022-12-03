@@ -117,7 +117,8 @@ void escribir_operando(FILE *fpasm, char *nombre, int es_variable)
   }
   else
   {
-    fprintf(fpasm, "    push dword %s\n", nombre);
+    fprintf(fpasm, "    mov edx, %s\n", nombre);
+    fprintf(fpasm, "    push dword edx\n");
   }
   return;
 }
@@ -577,14 +578,11 @@ void escribir(FILE *fpasm, int es_variable, int tipo)
   if (!fpasm)
     return;
 
-  // Variable into stack
-  fprintf(fpasm, "    pop dword eax\n");
   if (es_variable == 1)
   {
-    fprintf(fpasm, "    mov dword eax, [eax]\n");
+    fprintf(fpasm, "    pop dword edx\n");
+    fprintf(fpasm, "    push dword [edx]\n");
   }
-
-  fprintf(fpasm, "    push dword eax\n");
 
   // Select print function
   if (tipo == ENTERO)
@@ -593,12 +591,14 @@ void escribir(FILE *fpasm, int es_variable, int tipo)
   }
   else if (tipo == BOOLEANO)
   {
-    fprintf(fpasm, "  call print_boolean\n");
+    fprintf(fpasm, "    call print_boolean\n");
   }
-  // Final de linea
-  fprintf(fpasm, "    call print_endofline\n");
+
   // Arreglar la pila
   fprintf(fpasm, "    add esp, 4\n");
+  // Final de linea
+  fprintf(fpasm, "    call print_endofline\n");
+
   return;
 }
 
@@ -722,6 +722,7 @@ void while_fin(FILE *fpasm, int etiqueta)
 void escribir_elemento_vector(FILE *fpasm, char *nombre_vector,
                               int tam_max, int exp_es_direccion)
 {
+  fprintf(fpasm, ";escribir_elemento_vector\n");
   if (!fpasm)
     return;
 
@@ -802,14 +803,12 @@ void escribirParametro(FILE *fpasm, int pos_parametro, int num_total_parametros)
     return;
 
   int d_ebp;
-
-  // ***** MIRAR ESTO *****//
-  // Sabemos que ebp + 4 es la dir, ebp + 8 es el primer arg
-  // Movemos 4 + 4 * numero de parametros menos la posicion del parametro
-
+  fprintf(fpasm, ";escribirParametro\n");
+  
   d_ebp = 4*(1+(num_total_parametros-pos_parametro));
 
   // Introducir param en pila
+
   fprintf(fpasm, "    lea eax, [ebp + %d]\n", d_ebp);
 
   fprintf(fpasm, "    push dword eax\n");
@@ -819,7 +818,7 @@ void escribirParametro(FILE *fpasm, int pos_parametro, int num_total_parametros)
 
 void escribirVariableLocal(FILE *fpasm, int posicion_variable_local)
 {
-
+  fprintf(fpasm, ";escribirVariableLocal\n");
   if (!fpasm)
     return;
 
@@ -851,6 +850,25 @@ void asignarDestinoEnPila(FILE *fpasm, int es_variable)
   fprintf(fpasm, "    mov dword [ebx], eax\n");
 }
 
+void reordenacionEnPila(FILE *fpasm, int es_variable)
+{
+  if (!fpasm)
+    return;
+  /* Valor a asignar */
+  fprintf(fpasm, "    pop dword eax\n");
+  if (es_variable == 1) {
+    /*Si es var se guarda*/
+    fprintf(fpasm, "    mov dword eax, [eax]\n");
+  }
+  /* Donde se tiene que asignar */
+  fprintf(fpasm, "    pop dword ebx\n");
+  /* Realiza la asignación */
+  fprintf(fpasm, "    mov dword [ebx], eax\n");
+
+
+}
+
+
 void operandoEnPilaAArgumento(FILE *fd_asm, int es_variable)
 {
 
@@ -863,7 +881,7 @@ void operandoEnPilaAArgumento(FILE *fd_asm, int es_variable)
     fprintf(fd_asm, "    pop eax\n"); 
     // Se extrae, se usa y se devuelve a la pila
     fprintf(fd_asm, "    mov eax, [eax]\n"); 
-    fprintf(fd_asm, "    push eax\n");
+    fprintf(fd_asm, "    push dword eax\n");
   }
 
   return;

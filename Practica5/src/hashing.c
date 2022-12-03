@@ -9,7 +9,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "hashing.h"
 
 /**
@@ -63,6 +62,18 @@ void destroy_table(Table *table)
   return;
 }
 
+/**
+ * Open the local environment
+ * @param table table object
+ * @param key key to search
+ * @param size size
+ * @param cathegory cathegory
+ * @param type type
+ * @param complexity complexity
+ * @param global global
+ * @param local local
+ * @return 0 if success, 1 if error
+ */
 int open_local_env(Table *table, char *key, int size, ElementCathegory cathegory,
                    DataType type, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
 {
@@ -74,7 +85,7 @@ int open_local_env(Table *table, char *key, int size, ElementCathegory cathegory
   {
     return 1;
   }
-  // PREGUNTA POR QUE ESTOY CREANDO DOS ELEMENTOS, Y NO METO EL MISMO EN LAS DOS TABLAS
+
   entry1 = create_entry(key, size, cathegory, type, complexity, global, local);
   entry2 = create_entry(key, size, cathegory, type, complexity, global, local);
 
@@ -91,7 +102,11 @@ int open_local_env(Table *table, char *key, int size, ElementCathegory cathegory
 
   return 0;
 }
-
+/**
+ * Shut down the local environment
+ * @param table table object
+ * @return 0 OK 1 BAD
+ */
 int shut_down_local_env(Table *table)
 {
 
@@ -112,7 +127,17 @@ int shut_down_local_env(Table *table)
   table->env = GLOBAL;
   return 0;
 }
-
+/**
+ * Creates an entry object
+ * @param key key of the entry
+ * @param size size of the entry
+ * @param cathegory cathegory of the entry
+ * @param type type of the entry
+ * @param complexity complexity of the entry
+ * @param global global arguments of the entry
+ * @param local local arguments of the entry
+ * @return Entry object linked to entry
+ */
 Entry *create_entry(char *key, int size, ElementCathegory cathegory,
                     DataType type, DataComplexity complexity, ArgsInfo global, ArgsInfo local)
 {
@@ -148,7 +173,7 @@ Entry *create_entry(char *key, int size, ElementCathegory cathegory,
  */
 int insert_entry(Table *table, Entry *entry)
 {
-
+  // Tal vez se debería de poder usar esto directamente (Checkear)
   // if (search_entry(table, entry->key) != NULL)
   //{
   //   return 1;

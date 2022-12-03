@@ -295,7 +295,7 @@ no “variables”
 Esta función realiza la tarea de dado un operando escrito en la pila y sabiendo si es variable
 o no (es_variable) se deja en la pila el valor correspondiente
 */
-
+void reordenacionEnPila(FILE *fpasm, int es_variable);
 void llamarFuncion(FILE *fd_asm, char *nombre_funcion, int num_argumentos);
 /*
 Esta función genera código para llamar a la función nombre_funcion asumiendo que los

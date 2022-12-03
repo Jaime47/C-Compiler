@@ -8,7 +8,7 @@
 
 typedef enum
 {
-  GLOBAL = 1,
+  GLOBAL = 0,
   LOCAL
 } EnvType;
 

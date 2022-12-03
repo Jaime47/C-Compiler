@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS= -g -I./src -I./include -I./object
-
+################################################################
 TEST_DIR=./ejemplos
 
 all:
@@ -74,4 +74,11 @@ clean:
 	@rm -rf ./object/hashing.o
 	@rm -rf ./object/generacion.o
 	@rm -rf y.output
+	@rm -rf ./ejemplos/*.o
+	@rm -rf ./ejemplos/*.asm
+	@rm -rf ./ejemplos/factorial
+	@rm -rf ./ejemplos/funciones_vectores
+	@rm -rf ./ejemplos/condicionales
+	@rm -rf ./ejemplos/fibonacci
+	@rm -rf ./ejemplos/funciones			
 	@rm -rf alfa
